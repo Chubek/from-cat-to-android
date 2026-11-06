@@ -1,0 +1,207 @@
+\chapter{Unix as Infrastructure}
+\label{ch:infrastructure}
+\index{system administration}\index{servers}\index{containers}\index{security}
+
+\section{The user may never see the machine}
+
+A person browsing a website may depend on Unix-like systems without
+interacting with a terminal, desktop, or recognizable operating-system
+interface. Servers perform computation behind a network protocol.
+The user's experience is shaped by latency, availability, and correctness,
+while the operating system recedes into an infrastructure layer.
+
+This is not a complete break with the original system.
+Time-sharing also mediated access to shared resources. The difference is
+scale, distance, automation, and the division of responsibility.
+A server may be operated by one organization, hosted by another, built
+from hundreds of projects, and used by people who cannot inspect its
+configuration or choose when it is upgraded.
+
+Unix's process model, networking, toolchain, and scriptable environment
+made it well suited to this setting. Free software made extensive
+adaptation and redistribution possible. Commodity hardware improved the
+economics. None of these advantages eliminates the work of keeping a
+service dependable.
+
+\section{Booting is the beginning of a dependency graph}
+\index{init}\index{systemd}\index{service supervision}
+
+After firmware and a bootloader arrange initial execution, the kernel
+initializes essential facilities and starts user-space work.
+The first user-space process in the traditional model has special
+responsibilities for the rest of the environment. Historical init
+arrangements and scripts established services in a largely sequential
+style, with system-specific conventions.
+
+Modern service managers can express dependencies, monitor processes,
+restart failed services, collect logs, and coordinate sockets and other
+resources. Systemd is a prominent Linux example; other systems and
+communities use different supervisors. It is not a universal component
+of Unix, nor is its presence a definition of Linux.
+
+Supervision addresses a real gap between launching a process and
+maintaining a service. A process may start successfully but fail to become
+ready. A service may need a network mount, credentials, or a local database
+before it can do useful work. Restarting it blindly can amplify a failure
+or destroy diagnostic evidence.
+
+Dependencies also contain cycles and ambiguous readiness conditions.
+``The network is up'' can mean a configured interface, a route, successful
+name resolution, or access to a particular service. A useful service
+contract states the condition it actually needs. Administration becomes
+more reliable when vague global milestones are replaced with specific
+observable requirements.
+
+\section{Permissions are a beginning, not a complete sandbox}
+\index{permissions}\index{privilege separation}\index{SELinux}\index{seccomp}
+
+Traditional Unix permissions attach owner, group, and other access rules
+to filesystem objects. Credentials determine which class applies.
+The superuser model historically provided broad administrative authority.
+These mechanisms support multiuser isolation, but they are not a complete
+answer to mutually hostile applications sharing one user's account.
+
+An ordinary desktop application may be able to read many of that user's
+files, connect to local services, and access inherited credentials.
+If it is compromised, the damage can extend well beyond its intended task.
+The principle of least privilege asks that a component receive only the
+authority it actually needs.
+
+Privilege separation can divide a service into a small component that
+performs restricted privileged operations and larger components running
+with less authority. Linux capabilities split some traditional root powers;
+mandatory-access-control systems such as SELinux and AppArmor impose
+additional policies; seccomp can restrict system-call behavior.
+Each mechanism has a defined scope and can be undermined by mistakes in
+the surrounding configuration.
+
+Chroot changes a process's apparent filesystem root, but it is not by
+itself a complete isolation boundary. Filesystem views are only one part
+of a process's authority. Open descriptors, credentials, kernel attack
+surface, and other interfaces remain relevant. A historical convenience
+must not be promoted into a security guarantee it was not designed to make.
+
+\section{Names and resources are different problems}
+\index{namespaces}\index{cgroups}
+
+Linux namespaces can give processes different views of selected system
+resources: process identifiers, mounts, networking, and other domains.
+A process inside a container can see a filesystem layout and PID space
+that differ from the host's ordinary view. The kernel is still shared.
+
+Control groups organize processes for resource control and accounting.
+They can constrain or weight use of CPU, memory, I/O, and other resources,
+depending on controllers and configuration. A namespace can hide a name;
+a cgroup can constrain consumption. Confusing these functions makes it
+hard to explain why a container can look isolated while still exhausting
+a shared resource.
+
+The cgroup v2 documentation describes a unified hierarchy and explicit
+rules for controller behavior and delegation. It is a reminder that a
+resource-control interface is itself a substantial system, with constraints
+that administrators and runtimes must respect \parencite{cgroups}.
+A value written to a control file is meaningful only within that model.
+
+Containers assemble these and other mechanisms with filesystem images,
+credentials, security policy, and runtime setup. They do not create a
+second independent kernel. A virtual machine normally adds a guest kernel
+behind a virtualized hardware boundary. The two approaches can coexist;
+a cloud deployment may run containers inside virtual machines.
+
+The distinction has practical consequences. A kernel vulnerability can
+affect containers sharing that kernel. A virtual machine has its own
+attack surface in the hypervisor and device model. The right boundary
+depends on the threat model and operational requirements, not on a universal
+claim that one packaging format is always safe.
+
+\section{An image is not the running service}
+
+A container image can record a filesystem and execution metadata.
+It does not necessarily include external data, secrets, network policy,
+host kernel behavior, or the service's complete deployment configuration.
+Reproducing an image is therefore not the same as reproducing the service.
+
+Persistent data requires a separate lifecycle. Replacing an application
+container should not accidentally discard the database, and rolling back
+an executable may not roll back a schema change. Versioned artifacts
+help, but applications must define compatibility across transitions.
+The most expensive failures often occur between versions rather than
+within a single version.
+
+Orchestrators such as Kubernetes coordinate desired state across many
+machines. They can place work, restart it, expose services, and manage
+rollouts. Their control loops add another layer of asynchronous behavior.
+The fact that a configuration has been accepted does not mean every
+machine has already reached the requested state.
+
+This resembles the old distinction between runnable and running.
+A declaration of intent and an observed condition are different facts.
+Good operators measure the latter, while keeping enough history to
+understand why the control system has not achieved the former.
+
+\section{Configuration is a program with delayed consequences}
+
+Shell scripts remain common in infrastructure because they can orchestrate
+existing tools with little ceremony. Greenberg and colleagues observe that
+cloud environments have not displaced the shell; they have supplied more
+places for it to appear \parencite{shell-future}.
+The danger is treating a script as disposable after it becomes essential.
+
+Configuration languages have their own semantics.
+Defaults, inheritance, includes, variable expansion, and merge rules can
+create behavior no individual file states plainly. A system can contain
+a hidden state machine in the interaction among scripts, service managers,
+and remote controllers even when no source file calls it one.
+
+Declarative configuration helps when the desired state is well specified
+and convergence is controlled. It does not guarantee harmless repetition.
+An operation described as a resource may still trigger irreversible work.
+A migration, credential rotation, or storage deletion needs its own
+transition rules and recovery plan.
+
+The Unix tradition offers a useful discipline here: make inputs explicit,
+check status, keep diagnostic output distinct from machine data, and
+preserve observable intermediate state. These practices are valuable
+whether the final controller is a shell script or a large service.
+
+\section{Reliability is a maintenance relationship}
+\index{observability}\index{updates}\index{backups}
+
+A reliable service needs monitoring, logs, updates, tested restoration,
+and people who understand its failure modes. A backup that has never been
+restored is evidence that data was copied, not proof that service can be
+recovered. A health check that merely confirms a process exists can miss
+a service unable to answer useful requests.
+
+Metrics, logs, and traces provide different evidence.
+A metric can reveal a rising error rate; a log can explain an individual
+failure; a trace can connect work across services. None should require
+exposing secrets or collecting irrelevant personal data to be useful.
+Observability is the design of evidence, not an invitation to record
+everything indiscriminately.
+
+Updates have a similar dual role. They repair defects while introducing
+change. Long-term maintenance may preserve an interface while backporting
+security fixes. A version string alone may not tell whether a known defect
+is present. Operators need the distributor's actual patch and support
+information.
+
+The supplied random-input reliability study remains relevant as a method,
+not as a current statistic. Frequently used components can contain
+unexplored failure paths. Fuzzing, fault injection, and recovery exercises
+supply evidence ordinary successful operation cannot provide
+\parencite{fuzz}.
+
+\section{Infrastructure preserves the old questions at new scale}
+
+The server and cloud eras did not abolish Unix's fundamental concerns.
+Processes still need lifetimes, names still need interpretation,
+communication still has partial failures, and persistent state still
+needs crash semantics. Automation multiplies the speed and reach of both
+good decisions and mistakes.
+
+The major change is that the person affected by a failure may be far from
+the person who can diagnose it. Clear contracts and useful evidence become
+more valuable as that distance grows. The system's success is measured
+less by how elegantly it can be configured than by how predictably it
+serves people who never see the configuration.

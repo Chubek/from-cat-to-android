@@ -1,0 +1,180 @@
+\chapter{The Screen Before Windows}
+\label{ch:terminals}
+\index{terminals}\index{curses}\index{termcap}\index{terminfo}\index{Teletype}
+
+\section{A terminal is a separate participant}
+
+Early Unix users often interacted through a terminal whose behavior was
+partly independent of the host. A printing terminal turned characters
+into marks on paper. A video terminal maintained a display and interpreted
+control sequences. Neither was merely a modern graphical text box with
+its decoration removed.
+
+The connection carried a stream of bytes. Some represented printable
+characters; others changed terminal state or controlled the communication.
+The host also maintained terminal settings that affected how input and
+output were processed. The result was a protocol among application,
+kernel terminal subsystem, communication link, and device.
+
+Slow output made brevity valuable. A line editor could operate without
+redrawing a page. Short command names and compact diagnostics reduced
+transmission and typing. These choices later became cultural expectations,
+but their original economics were concrete. A convention optimized for
+paper and low bandwidth need not be the ideal convention for a new user
+on a fast display.
+
+\section{The kernel edits some of the input}
+\index{line discipline}\index{canonical mode}\index{termios}
+
+In canonical terminal input, the terminal subsystem can collect a line,
+interpret editing characters, and deliver input to the application after
+a delimiter. Echoing can make typed characters visible before the
+application reads them. Control characters can trigger signals or other
+special behavior according to the settings.
+
+This explains a common surprise: pressing a key does not always deliver
+one byte immediately to the application. Some work happens before the
+application's read completes. Conversely, a full-screen editor or game
+may configure a more direct input mode so it can interpret individual
+keystrokes itself.
+
+``Raw'' is often used informally for such behavior, but terminal settings
+contain several independent choices. Input translation, signal generation,
+echo, output processing, minimum byte counts, and timing can be configured
+separately. Modern portable code uses the specified termios interface;
+historical systems had different controls and structures
+\parencite[ch. 18]{apue}.
+
+A program that changes terminal state must restore it when appropriate.
+If it crashes or exits incorrectly, the next shell can inherit a confusing
+environment: no echo, unexpected line endings, or a display left in an
+alternate mode. The terminal remembers state beyond one process's lifetime.
+That is why cleanup is part of interface correctness.
+
+\section{Cursor addressing creates a new application style}
+
+A video terminal that can move its cursor and erase selected regions
+supports an entirely different interaction model from a printing terminal.
+An editor can show nearby text and change only the affected lines.
+A monitor can update a table of values. A menu can highlight a selection
+instead of printing another prompt below the previous one.
+
+The difficulty was diversity. Terminals differed in control sequences,
+available operations, dimensions, and the cost of an update. Hardcoding
+one device's behavior into every application would have reproduced the
+portability problem at the display boundary.
+
+Termcap described capabilities so applications could ask how a terminal
+performed a particular operation. Terminfo later provided a different
+compiled database and associated interfaces. The environment's terminal
+type identifies the expected description. A wrong value can produce
+nonsense even when the application and emulator are individually working.
+
+Capabilities are more informative than a list of brand names.
+An application usually wants to know how to move the cursor, clear a
+region, or select an attribute. It need not care which vendor supplied
+the device. This is another instance of replacing a concrete identity
+with an operational contract.
+
+\section{Curses keeps a model of the display}
+
+Ken Arnold's curses work at Berkeley helped applications use terminals
+without handcrafting every update. A curses library can maintain a virtual
+screen, compare it with its model of the actual screen, and emit a suitable
+sequence of terminal operations. Applications describe the desired result
+at a higher level than individual cursor-motion bytes.
+
+The distinction between a virtual window and the physical screen is useful.
+An application can update several logical regions, then request a refresh.
+The library can combine changes instead of transmitting each intermediate
+state. On a slow connection, avoiding redundant output can matter more
+than the cost of computing the difference.
+
+Curses is therefore not a graphical window system in the later X sense.
+Its windows are regions in a character-cell model within a terminal
+connection. They do not automatically correspond to independently managed
+client surfaces, graphics buffers, or desktop windows.
+The same word names different abstractions at different layers.
+
+Ncurses carried and extended this tradition in free software environments.
+Text interfaces remained useful for installers, remote administration,
+editors, and monitoring. Their persistence was not simply resistance to
+graphics. A character interface can be economical, script-friendly in
+some respects, and effective over remote links, provided the user's needs
+fit the model.
+
+\section{A pseudoterminal preserves the old agreement}
+\index{pseudoterminals}\index{terminal emulators}\index{SSH}
+
+A graphical terminal emulator displays a character-oriented session inside
+a modern desktop. On the host side, a pseudoterminal supplies the terminal
+interface expected by programs. One end belongs to the application-facing
+terminal subsystem; the other can be driven by an emulator or remote-login
+service.
+
+This arrangement preserves behavior that a plain pipe does not provide:
+terminal settings, job control, foreground process groups, and appropriate
+signal interactions. A program can test whether its output is a terminal
+and choose color or formatting accordingly. That choice is a convention,
+not proof that the output is human-readable in every setting.
+
+SSH can connect a remote session to a pseudoterminal while encrypting and
+authenticating the transport. The bytes sent through the session still
+include terminal control sequences. Secure transport does not remove the
+need to interpret those sequences carefully or sanitize untrusted material
+when the application requires it.
+
+The emulator also has its own policies: font selection, scrollback,
+clipboard interaction, colors, key mappings, and supported extensions.
+A terminal application and its emulator therefore negotiate a living
+protocol, even though the visual result resembles an old text screen.
+The apparent timelessness conceals decades of implementation change.
+
+\section{Characters are not display cells}
+\index{Unicode}\index{accessibility}
+
+ASCII made some early assumptions unusually convenient: many ordinary
+printable characters occupied one byte and one cell. International text
+breaks the equivalence. An encoding can use several bytes for a code point;
+a displayed grapheme can contain several code points; a glyph can occupy
+zero, one, or more terminal cells under the terminal's width rules.
+
+Combining marks, East Asian width, bidirectional scripts, and emoji
+sequences complicate cursor placement and selection. A program that cuts
+a byte string at an arbitrary offset can split an encoded character.
+A program that counts code points can still misjudge visual width.
+Terminal libraries and emulators must agree closely enough for the display
+to remain coherent, and agreement is not universal for every sequence.
+
+Accessibility presents another challenge. A text interface is not
+automatically accessible merely because it uses characters.
+Repeated screen repainting can obscure meaning for assistive technology.
+Color-only distinctions and position-dependent status can hide information.
+A line-oriented mode or a clear textual summary may be more usable than
+an elaborate full-screen dashboard.
+
+These issues do not make terminal applications obsolete. They show that
+an interface optimized for expert local use needs additional design when
+its audience and writing systems expand. The same pattern appears later
+in graphical desktops and phones.
+
+\section{The terminal's enduring place}
+
+The terminal preserves a compact boundary between a program and a wide
+range of display environments. A shell running remotely can remain useful
+without knowing the local GPU, monitor resolution, or desktop toolkit.
+That separation is extraordinarily valuable for administration and
+software development.
+
+Its limits are equally real. Precise typography, rich accessibility
+semantics, fluid images, touch input, and complex spatial interaction do
+not fit naturally into a character-cell protocol. Extensions can address
+some needs, but each extension adds negotiation and compatibility work.
+The terminal is a successful specialized interface, not a universal endpoint
+for all human interaction.
+
+Bitmap displays made it possible to redraw the interface boundary itself.
+Instead of asking which escape sequence moves a cursor, a system could
+manage arbitrary pixels, windows, input devices, and independent graphical
+clients. Unix's existing separation of processes and networks would shape
+how that next environment was built.

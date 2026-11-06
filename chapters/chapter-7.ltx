@@ -1,0 +1,172 @@
+\chapter{GNU, Linux, and the Work of Keeping Software Free}
+\label{ch:linux}
+\index{GNU}\index{Linux}\index{Stallman, Richard}\index{Torvalds, Linus}\index{free software}\index{open source}
+
+\section{The operating system was larger than the kernel}
+
+Richard Stallman announced the GNU project in 1983 and began its work in
+1984. Its aim was a free Unix-compatible operating system: an environment
+users could run, study, modify, and redistribute. Compatibility was a
+strategic choice. Familiar interfaces made existing software and experience
+useful, while a new implementation could establish different legal terms.
+The recursive name ``GNU's Not Unix'' captured both the relationship and
+the separation.
+
+An operating system in everyday use needs far more than a kernel.
+It needs a compiler and linker, libraries, a debugger, a shell, text tools,
+an editor, installation conventions, and documentation. GNU's work on
+Emacs, GCC, GDB, libraries, and utilities supplied many of these elements.
+Their importance is obscured when the history is told as though a kernel
+alone suddenly created a complete usable system \parencite[ch. 8, 10--12]{salus}.
+
+The project also treated legal permission as part of the engineering task.
+The Free Software Foundation, founded in 1985, supported this goal.
+The GNU General Public License used copyright to impose conditions on
+redistribution that preserved defined freedoms for recipients. It was not
+a rejection of all rules; it was a carefully chosen set of rules intended
+to prevent a familiar kind of loss of access.
+
+GNU's intended kernel path eventually involved the Hurd, a collection of
+servers built on a Mach foundation. The schedule and complexity of that
+work mattered because other components were already useful. A system can
+be incomplete as a project while contributing essential infrastructure to
+other systems. That is precisely what made the later combination with
+Linux possible.
+
+\section{A kernel for an inexpensive machine}
+\index{MINIX}
+
+Linus Torvalds began Linux in 1991 while a student in Helsinki, working
+with a 386-based personal computer. MINIX, Andrew Tanenbaum's teaching
+system, was part of the surrounding context. Linux was a new kernel
+implementation, not a rebranding of AT\&T Unix source. Its early ambition
+was much smaller than the eventual range of machines and organizations
+that would depend on it.
+
+The distinction between inspiration and code descent matters. An interface
+can be reproduced independently. A programmer can learn from a teaching
+system without making the new kernel a derivative of that system's
+implementation. Simplified family trees often blur these relationships by
+using the same line to mean shared code, influence, or compatibility.
+
+Linux's original licensing differed from the terms it later adopted.
+The move to GPL version 2 in 1992 helped make the kernel fit the wider free
+software ecosystem. Volunteers could combine it with existing tools and
+share the resulting systems. GNU components were central to many of those
+systems, though not every Linux-based environment would use the same
+libraries or utilities.
+
+This history explains the naming debate without resolving it by fiat.
+``GNU/Linux'' emphasizes the construction of a complete system from Linux
+and GNU components. ``Linux'' is the common shorter name in much everyday
+usage. Android demonstrates why neither expression should be applied
+mechanically: it uses the Linux kernel but a substantially different
+userspace, including Bionic rather than the GNU C library.
+
+\section{Distributions turn components into a system}
+\index{distributions}\index{package management}
+
+A kernel tarball, compiler, and collection of utilities are not yet an
+installation experience. Someone must decide versions, build packages,
+resolve dependencies, arrange a filesystem, provide an installer,
+configure services, publish updates, and support upgrades. Distributions
+made these integration tasks repeatable.
+
+Early projects such as SLS, Slackware, and Debian, followed by commercial
+and community distributions including Red Hat and SUSE, offered different
+answers. Their importance was not confined to branding. A package database
+could record which files belonged to which component. A dependency system
+could express that one package needed another. A release policy could
+trade newer versions against predictable behavior.
+
+Dependency management does not eliminate compatibility problems.
+A package can satisfy a declared version constraint and still expose a
+behavioral regression. Locally modified configuration complicates upgrades.
+Security fixes may need to be backported without changing a stable
+application interface. Distribution engineering therefore involves judgment,
+testing, and maintenance over time, not just automated compilation.
+
+The work also creates different notions of ``current.'' A server vendor
+may support an older release with carefully selected fixes. A rolling
+release may prioritize rapid integration. A developer machine may use
+new toolchains while a production machine values stable administration.
+These choices are coherent responses to different workloads rather than
+evidence that only one distribution has understood Unix correctly.
+
+\section{The network becomes a development medium}
+
+Source availability helped contributors inspect and modify Linux, but
+collaboration needed channels and decision processes. Mailing lists,
+patches, maintainers, release candidates, and subsystem ownership created
+a way to review changes without requiring every developer to understand
+every driver. Later, Git became a crucial tool for distributed development.
+The development model evolved with the scale of the work.
+
+Large-scale participation did not mean an absence of authority.
+Maintainers decide what to accept; reviewers require revisions;
+release managers choose when a change is ready. The ability to fork limits
+some forms of control but does not make a successful fork cheap.
+A project has accumulated tests, reputation, users, expertise, and
+relationships that cannot be duplicated by copying a directory alone.
+
+Corporate participation became substantial. Hardware vendors need drivers,
+cloud companies need scalability, and distributors need maintainable
+releases. Paid work and volunteer work coexist in the same repositories.
+The contrast between a purely commercial model and a purely amateur
+community is a poor description of the resulting system.
+
+There are genuine tensions. A sponsor's priorities may differ from a
+maintainer's, and a widely used subsystem can still depend on too few
+reviewers. Public source does not automatically distribute labor fairly.
+A history of open source should include the economics of maintenance,
+not merely the excitement of the first public release.
+
+\section{Free software and open source name different arguments}
+
+The term ``open source'' gained institutional prominence in 1998.
+It provided a way to argue for collaborative development and acceptable
+licenses in terms that many businesses found easier to engage with.
+The free software movement continued to emphasize users' freedoms as an
+ethical objective. The sets of licenses and projects overlap greatly;
+the reasons people give for supporting them need not.
+
+Neither movement means software must have a price of zero.
+A business can sell support, integration, hosted services, or copies while
+complying with relevant license obligations. Conversely, a free download
+can remain proprietary. Price, source access, redistribution rights,
+and governance should be examined separately.
+
+The distinction becomes important in appliances and services.
+A company may publish covered source while making a device difficult to
+modify. A network service may use free software internally without giving
+users the same practical control over the service. Different licenses
+address these situations differently. A broad slogan about ``openness''
+cannot replace a description of the actual arrangement.
+
+\section{A new center of gravity}
+
+Linux grew across servers, embedded devices, supercomputing, development
+machines, and phones. Its design and implementation changed substantially:
+new architectures, multiprocessor scalability, modern filesystems,
+security frameworks, virtualization, and extensive device support added
+layers far beyond the early 386 kernel. The continuity lies in maintained
+interfaces and a development lineage, not in an unchanged small program.
+
+The freely redistributable BSD systems followed their own trajectories.
+GNU continued independently across many components. Other kernels and
+research systems explored alternatives. The success of Linux did not
+collapse these histories into one project, even when they shared tools
+and contributors.
+
+A useful lesson is that freedom to combine components enlarges the space
+of possible systems. It can produce a conventional command-line server,
+a carefully integrated desktop, or a phone that offers no ordinary shell
+to its owner. The same legal and technical flexibility can support very
+different user experiences.
+
+To understand what endured through that expansion, it helps to stop the
+historical clock and examine a smaller specimen. Lions's Sixth Edition
+commentary offers an operating system compact enough to follow closely.
+Xv6 offers a later teaching reconstruction on different hardware.
+Together they reveal which ideas survived and which implementation
+assumptions had to be replaced.

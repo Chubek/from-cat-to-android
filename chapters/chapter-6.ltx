@@ -1,0 +1,178 @@
+\chapter{Who Gets to Call It Unix?}
+\label{ch:wars}
+\index{Unix wars}\index{POSIX}\index{Single UNIX Specification}\index{licensing}
+
+\section{A successful family becomes a commercial argument}
+
+By the 1980s, Unix was simultaneously a research tradition, licensed source
+code, a commercial product family, and a valuable name. These meanings
+could pull in different directions. Researchers wanted to revise a system.
+Application vendors wanted stable interfaces. Hardware vendors wanted to
+differentiate their machines while attracting the same software.
+The owner of the Unix intellectual property wanted a viable business.
+
+The Bell System's divestiture, effective in 1984, changed AT\&T's commercial
+setting. Unix development associated with AT\&T's product organization
+became increasingly important alongside the research editions.
+System III and System V were not simply new names for the next research
+manuals. They belonged to a product line that integrated work from several
+sources and served customers with different expectations.
+
+The familiar contrast between ``BSD'' and ``System V'' was consequently
+both useful and incomplete. Systems differed in terminal interfaces,
+interprocess communication, administration, libraries, and networking.
+Yet vendors borrowed features, offered compatibility facilities, and
+assembled hybrids. A real installed system often resisted classification
+as one pure branch \parencite[ch. 7--8]{kernighan-history}.
+
+For application developers, these differences imposed repeated work.
+Source could be portable in principle while requiring conditional code,
+separate build configurations, and extensive testing. Customers could
+pay the cost indirectly through delayed releases and limited support.
+The pressure for standardization was therefore practical as well as political.
+
+\section{Two kinds of openness compete}
+\index{Open Software Foundation}\index{Unix International}\index{System V Release 4}
+
+AT\&T and Sun's cooperation on a converged Unix intensified concern among
+other vendors about who would control the platform. The Open Software
+Foundation, formed in 1988 by a group of major companies, offered one
+institutional answer. Unix International supported the AT\&T-oriented
+alternative. ``Open'' did not yet guarantee the freedoms later associated
+with an open source license. It could mean vendor independence,
+standard interfaces, consortium membership, or access under commercial terms.
+
+System V Release 4 combined important elements from System V, BSD,
+SunOS, and Xenix. The act of integration was technically meaningful even
+though it did not end the market's disagreements. A converged source base
+could still produce distinct products, and a common specification could
+still leave room for incompatible extensions.
+
+The Unix wars were not one battle with a clear end date. They included
+alliances, branding, standards work, desktop competition, procurement,
+and the positioning of proprietary products. Some efforts reduced
+incompatibility; others multiplied the institutions claiming to solve it.
+The desire for a single market sometimes produced more standards before
+it produced fewer.
+
+It is tempting to declare that the fighting alone caused Unix vendors to
+lose the desktop. That explanation is too tidy. Hardware economics,
+application availability, user experience, Microsoft's growth, and the
+emergence of inexpensive Unix-like systems all mattered. Standards conflict
+was part of the cost structure, not a sufficient explanation for every
+commercial outcome.
+
+\section{What POSIX can promise}
+
+A standard can define an interface without prescribing its implementation.
+POSIX specifies operating-system services and, in its broader body of
+specifications, a shell and utilities environment. A conforming program
+can rely on documented behavior within that scope. The first IEEE
+1003.1 standard appeared in 1988; later revisions expanded and consolidated
+the specification.
+
+This is source-level agreement, not an instruction-set translator.
+A C program using specified interfaces may be recompiled for another
+conforming system. A binary still depends on processor architecture,
+calling conventions, executable format, dynamic linking, and other ABI
+properties. The distinction between API and ABI explains why two systems
+can both implement POSIX without running each other's executables
+\parencite[ch. 2]{apue}.
+
+A specification also has boundaries. It may mark a feature optional,
+leave a value implementation-defined, or permit several outcomes.
+A program that accidentally relies on an unspecified behavior can work
+on one system and fail on another without either system violating the
+standard. Portability requires reading those qualifications rather than
+merely recognizing a familiar function name.
+
+Standards do not freeze all development. A system can provide extensions
+outside the common contract. Those extensions may solve important
+problems, such as scalable event notification or specialized storage
+control. The author must decide whether the benefit justifies limiting
+portability. The useful question is not whether extensions are morally
+wrong, but whether the dependency is deliberate and documented.
+
+\section{A trademark is a different kind of interface}
+\index{UNIX certification}\index{The Open Group}
+
+The Single UNIX Specification and certification associated with The Open
+Group give the UNIX name a formal meaning beyond family resemblance.
+Certification applies to a product and version in a defined environment.
+It should not be inferred from a kernel's ancestry or from a distributor's
+claim to be Unix-like.
+
+This makes several apparently contradictory statements compatible.
+A system can be recognizably Unix in design without being certified.
+A Linux-based product can pursue or obtain certification without acquiring
+AT\&T kernel code. A system descended from historical Unix does not
+automatically certify every future release or hardware configuration.
+Genealogy, interface conformance, and trademark permission are three
+separate axes.
+
+Keeping those axes separate is especially helpful for Android and macOS.
+Android uses Linux but does not present a conventional desktop Unix
+application environment. Apple's product history includes certified UNIX
+environments, but that does not make every Apple operating system or every
+version interchangeable. The contemporary landscape becomes clearer when
+names are treated as claims with a scope.
+
+\section{The BSD legal transition}
+\index{USL litigation}\index{4.4BSD-Lite}\index{Bostic, Keith}
+
+Berkeley developers worked to replace code that required an AT\&T license.
+Keith Bostic's effort to obtain replacement utilities and the work of the
+CSRG on the kernel made progressively freer distributions possible.
+Networking Release 1 and Networking Release 2 were milestones in this
+process. They should not be mistaken for the first day anyone shared BSD
+software, nor should Net/2 be described as the final legal resolution.
+
+Unix System Laboratories brought litigation involving Berkeley Software
+Design, Inc., and the University of California in 1992. Claims,
+counterclaims, and the resulting uncertainty affected the BSD ecosystem.
+The 1994 settlement and the release of 4.4BSD-Lite provided an important
+basis for further development without the old AT\&T source-license
+requirement. The legal outcome was more specific than either ``all Unix
+became free'' or ``Berkeley proved every claim false''
+\parencite[ch. 13]{salus}.
+
+The timing overlapped with Linux's early growth, but overlap does not prove
+a single cause. Linux also benefited from inexpensive PCs, accessible
+collaboration, existing GNU tools, and a growing distribution ecosystem.
+The litigation was one influence on people's choices; it was not an
+experiment that isolated the cause of Linux adoption.
+
+FreeBSD and NetBSD began in 1993, OpenBSD branched from NetBSD in 1995,
+and DragonFly BSD later branched from FreeBSD. Their communities established
+different priorities and release practices. The shared BSD label does not
+mean that they are editions of one centrally managed product. Their
+histories show how legal independence can support technical diversity
+rather than force convergence.
+
+\section{Licenses shape future choices}
+
+A permissive license typically allows redistribution, modification, and
+incorporation into larger products subject to conditions such as retaining
+notices. A copyleft license adds conditions designed to preserve specified
+freedoms when covered work is conveyed. The exact obligations depend on
+the actual license and circumstances, not on the casual labels ``BSD'' or
+``GPL.''
+
+In particular, the GPL does not generally require every private modification
+to be published to the world. Distribution and corresponding-source
+obligations must be understood in context. Nor does a permissive license
+mean that authors have abandoned copyright or attribution. Both approaches
+use legal permissions to structure collaboration; they select different
+rules for downstream behavior.
+
+This is why licensing belongs inside a technical history. A kernel may be
+elegant but unavailable for a needed use. A modest tool with clear
+redistribution rights can become infrastructure for products its authors
+never anticipated. An interface tells programmers how components can
+connect; a license helps determine who may make and share those connections.
+
+The Unix wars showed how much economic value accumulated around such
+agreements. GNU, Linux, and the freely redistributable BSD systems would
+change the bargaining position. A user could increasingly choose a Unix-like
+environment whose right to continue developing did not depend on one
+proprietor's continued cooperation.

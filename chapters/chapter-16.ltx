@@ -1,0 +1,181 @@
+\chapter{Pixels, Networks, and the X Window System}
+\label{ch:x}
+\index{X Window System}\index{bitmap terminals}\index{window managers}\index{Blit}
+
+\section{A bitmap changes what a screen can mean}
+
+A character terminal begins with a grid whose cells have predefined roles.
+A bitmap display begins with addressable picture elements.
+Text becomes one kind of image among many. Windows can overlap,
+proportional fonts can appear beside diagrams, and a pointer can select
+objects that are not conveniently described by a line number.
+
+Experiments at Bell Labs, including the Blit terminal associated with Rob
+Pike and colleagues, explored programmable bitmap terminals and layers of
+interaction. Computation could be divided between host and terminal in
+ways that did not fit the old picture of a passive display.
+A terminal could become a small computing environment in its own right.
+
+These experiments should not be turned into a single chain in which curses
+necessarily evolved into Blit and then into X. Different groups pursued
+related problems with different hardware and assumptions.
+The relationship is a change in the available design space, not always
+a direct code lineage \parencite{kernighan-history,raymond}.
+
+\section{Why the display is the server}
+
+X emerged at MIT in the 1980s, with Bob Scheifler and Jim Gettys among its
+central figures. It offered a network-capable protocol between graphical
+applications and a display service. The application is the X client;
+the component managing the display and input is the X server.
+This terminology follows the service being provided, not the physical
+size or location of the machine.
+
+An application running on a distant host can connect to a server on the
+user's workstation. The user sees a local window while the application
+executes elsewhere. This fits the workstation era's mixture of personal
+interaction and shared computation. It also explains why the server is
+not necessarily the large remote machine in everyday language.
+
+X11, introduced in 1987, established a protocol whose longevity became
+remarkable. Implementations and extensions changed, but the protocol
+boundary allowed a huge body of clients and tools to accumulate.
+A stable protocol can preserve investments across hardware generations
+in much the same way that a stable file interface can preserve applications.
+
+Network transparency was valuable, but it did not make distance free.
+Round trips add latency. A program that repeatedly asks the server for
+information and waits before issuing the next request can perform poorly
+over a long link. A protocol permitting remote execution does not guarantee
+that every application uses it efficiently.
+
+\section{The server does not choose the entire desktop}
+
+X provides mechanisms for windows, events, drawing, and related resources.
+A window manager can decide placement, decoration, stacking, and focus
+policy. Toolkits provide widgets and application conventions.
+Desktop environments assemble still more services, including file
+management, settings, session behavior, and integration among applications.
+
+This division creates flexibility. A user can change the window manager
+without replacing every client. A toolkit can offer a new visual style
+without requiring the server to implement every button's behavior.
+Different institutions can choose interaction policies suited to their
+users and hardware.
+
+It also creates integration costs. Selection and clipboard conventions,
+keyboard focus, drag and drop, fonts, settings, and session management
+need agreements across components that were designed independently.
+A protocol that permits many policies does not supply a shared policy
+by itself. Users can experience that absence as inconsistency
+\parencite[discussion of X and mechanism versus policy]{raymond}.
+
+Desktop projects such as KDE and GNOME addressed some of these needs by
+building more coherent environments on top of the display system.
+Their importance extends beyond visual decoration. Common libraries,
+accessibility interfaces, settings mechanisms, and application conventions
+make the platform easier to use and develop for.
+
+\section{Rendering moves away from the original model}
+\index{OpenGL}\index{Mesa}\index{direct rendering}
+
+Early X offered drawing requests suited to the hardware and applications
+of its time. Later graphics workloads demanded accelerated 3D rendering,
+complex compositing, modern font rasterization, and efficient image
+transfer. Asking the server to perform every rendering operation through
+the original protocol was no longer the best path.
+
+Direct-rendering infrastructure let applications use graphics hardware
+through controlled interfaces while the display system retained
+coordination responsibilities. OpenGL and later APIs supplied rendering
+models very different from drawing a rectangle through core X requests.
+Mesa became a major collection of open graphics implementations and
+userspace drivers on Linux and other systems.
+
+The resulting stack contains several distinct roles. A kernel driver
+manages hardware access and resources. A userspace driver translates
+rendering operations into device commands. Libraries expose APIs to
+applications. A display server and compositor coordinate visible surfaces.
+The same vendor name can appear in several layers, but those layers are
+not interchangeable.
+
+This is why a report that ``X renders everything'' can be misleading for
+a modern desktop. Many applications already render their own content
+using local libraries and acceleration, then arrange for the result to
+be displayed. The protocol's historical identity and the actual route
+of a frame can differ substantially.
+
+\section{Compositing adds another view of the screen}
+\index{compositors}
+
+A compositing window manager can combine off-screen window contents into
+a final image. This enables effects such as shadows, translucency,
+transforms, and smoother transitions. It also provides a place to manage
+presentation timing and the relationship between application updates and
+the display's refresh.
+
+The extra stage can be useful, but it raises questions about copying,
+latency, and synchronization. A buffer must not be displayed before
+rendering finishes, and an application must not overwrite storage still
+being used for presentation. Graphics correctness includes ownership
+and timing agreements as much as pixel calculations.
+
+Full-screen applications can sometimes avoid unnecessary composition
+through direct-scanout or related paths, subject to hardware and policy.
+There is no universal rule that compositing always adds the same amount
+of latency or that bypassing it is always possible.
+The implementation must consider format, scaling, overlays, multiple
+monitors, and other clients.
+
+The growing complexity motivated a reconsideration of where the display
+boundary should sit. If clients render their own content and a compositor
+already decides what reaches the screen, why retain all the historical
+coordination paths between client, X server, window manager, and compositor?
+Wayland would make that question central.
+
+\section{Trust in a shared display connection}
+\index{X Window System!security}
+
+The traditional X model assumes considerable trust among clients connected
+to a server. Depending on extensions and controls, clients can obtain
+information or influence input in ways inappropriate for mutually hostile
+applications. A desktop running every application under one user's broad
+authority inherits that assumption.
+
+Authentication to the server is therefore critical.
+Opening access broadly to solve a connection problem can grant far more
+power than the user intended. Remote forwarding through SSH protects a
+transport and can apply trust distinctions, but it does not turn the whole
+application environment into a capability system automatically.
+
+This security model is historically understandable. A workstation user's
+programs were often treated as collaborators in one personal environment.
+Modern desktops install applications from many sources, process hostile
+web content, and offer sandboxing. A display protocol that assumes all
+clients are equally trusted can undermine those boundaries.
+
+The criticism is not that X developers failed to predict every later
+threat. It is that a once-useful trust model became an architectural
+constraint. Long-lived interfaces preserve assumptions along with features.
+Replacing those assumptions requires migration work that can be as hard
+as designing the new protocol.
+
+\section{What X accomplished}
+
+X gave Unix a broadly shared graphical substrate across vendors and
+architectures. It supported local and remote applications, a wide variety
+of window managers, and decades of software. That achievement is not
+cancelled by the difficulty of adapting it to new rendering and security
+models.
+
+The complaints in the supplied \emph{UNIX-HATERS Handbook} remain useful
+as evidence of costs users felt while the system was still relatively
+young. They should be read beside, rather than in place of, an account of
+what the architecture enabled \parencite[ch. 7]{haters}.
+A history that records only triumph or only irritation misses the reason
+such systems both succeed and become candidates for replacement.
+
+Wayland did not arise because Unix suddenly discovered graphics.
+It arose after decades of graphical practice had shifted rendering,
+compositing, hardware access, and application trust. Understanding X's
+success makes the reasons for that shift more precise.

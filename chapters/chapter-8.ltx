@@ -1,0 +1,172 @@
+\chapter{Learning to Read a Kernel}
+\label{ch:reading}
+\index{Lions, John}\index{Sixth Edition Unix}\index{xv6}
+
+\section{Why a small implementation is a serious subject}
+
+John Lions's commentary approaches Unix as something a student can read.
+The subject is Sixth Edition on the PDP-11, not an abstract operating system
+assembled from unrelated algorithms. A table entry leads to a scheduler;
+a scheduler leads to a context switch; a context switch leads to machine
+registers. The explanation gains power from following an actual working
+system across those boundaries.
+
+Its small size makes this possible, but smallness should not be confused
+with triviality. A kernel mediates between independent computations and
+physical devices. It must preserve protection, retain enough state to
+resume interrupted work, and coordinate activity that happens at
+inconvenient moments. Even a compact implementation contains subtle
+interactions whose correctness depends on assumptions outside the current
+function \parencite[ch. 1, 4]{lions}.
+
+The commentary also has a history as a teaching artifact. Source licensing
+restricted its circulation, and authorized teaching could be difficult to
+separate from prohibited redistribution. Its later wider publication
+made visible an educational demand that the earlier licensing structure
+had frustrated. The famous reputation of the book is therefore partly
+technical and partly a story about who could study a system.
+
+This chapter uses Lions's method rather than reproducing his annotated
+source. The reader should learn to ask what must remain true across a
+transition. Once that habit is established, an unfamiliar kernel becomes
+less a mass of names and more a set of responsibilities.
+
+\section{Begin with the machine contract}
+\index{PDP-11!memory management}\index{traps}
+
+The processor defines which instructions are privileged, how interrupts
+arrive, how memory addresses are translated, and what state is saved when
+execution changes mode. The operating system cannot wish these rules away.
+An implementation explanation that omits them can make correct code look
+mysterious or incorrect code look plausible.
+
+On the PDP-11 systems discussed by Lions, memory management uses segments
+and architecture-specific registers. The familiar modern picture of a
+large demand-paged virtual address space is the wrong starting point.
+The kernel also works within tight address-space limits, with arrangements
+for kernel state and per-process data that exploit the machine's mapping
+facilities. These details explain code that would otherwise seem
+needlessly indirect.
+
+A trap is a controlled entry into privileged execution, often used to
+request a system service. An interrupt usually reports an asynchronous
+event from a device or timer. Both need entry and return machinery, but
+they differ in origin and in what the interrupted computation expects.
+The hardware saves some state; assembly and C code preserve and interpret
+the rest.
+
+The right reading order is consequently not always the order of files in
+a directory. Learn the processor's contract, identify the kernel's
+principal tables, trace one complete operation, then examine its exceptional
+paths. This is closer to following a transaction through an organization
+than to reading a novel from the first line to the last.
+
+\section{Tables are the system's memory of itself}
+
+A running kernel contains representations of processes, open files,
+in-memory inodes, buffers, devices, and pending events. These structures
+are not incidental bookkeeping. They are how the system remembers the
+relationships that its interfaces promise.
+
+In Sixth Edition, the process table and the per-process user structure
+serve different roles. Information needed to manage processes must remain
+accessible even when a process's larger image is swapped out. Other state
+can travel with the process. That division makes sense only when read
+against the memory and swapping model \parencite[ch. 7--8]{lions}.
+
+Similarly, a descriptor number, an open-file table entry, and an inode
+represent different things. The descriptor is a process-local reference.
+The open-file entry holds state associated with an opening, including an
+offset. The inode represents the underlying filesystem object. Combining
+them in one's mental model makes inherited descriptors and unlinking
+almost impossible to explain correctly.
+
+For each structure, ask four questions: who allocates it, who may refer to
+it, what protects changes to it, and when it can be reclaimed. These
+questions expose lifetimes. A reference count is useful only when the
+code that acquires and releases references obeys a consistent rule.
+A lock is useful only when all relevant readers and writers agree on
+what it protects.
+
+\section{Trace a request, then interrupt it}
+
+Suppose a program requests bytes from a file. The request passes through
+system-call entry, argument handling, descriptor lookup, file and inode
+state, block mapping, and the buffer cache. If the needed block is absent,
+a device operation may be started and the process may sleep. A device
+interrupt later records completion and makes waiting work runnable.
+Finally the request returns bytes or an error to user space.
+
+This trace is more informative than studying each function independently.
+It reveals where the operation can block, where an object must remain
+alive, and where another process can observe state. It also reveals that
+a system call need not run in one uninterrupted stretch. The logical
+operation can span several periods of CPU execution.
+
+Now ask what happens at each boundary. What if a signal arrives? What if
+memory allocation fails? What if another process closes its reference?
+What if the device reports an error? Historical kernels and modern kernels
+answer these questions differently, but the questions are stable.
+
+Lions's treatment rewards this style of inquiry. The celebrated difficult
+context-switch passage is not a license to skip understanding. It is a
+warning that saved execution state, address mappings, and control flow
+must be considered together. A local reading of a few C statements can
+miss the operation's real meaning.
+
+\section{Xv6 is a comparison, not a time machine}
+\index{RISC-V}\index{Sv39}
+
+The supplied xv6 text is dated 27 October 2019 and describes a RISC-V
+implementation. Earlier xv6 material often used x86, and newer revisions
+can change details and section numbering. This book uses the supplied
+edition consistently. Its chapters on page tables, traps, locking,
+scheduling, and the file system provide a second complete specimen
+\parencite{xv6}.
+
+Xv6 preserves the teaching value of a small Unix-like interface while
+making different hardware assumptions. Its Sv39 page tables, supervisor
+mode, trap machinery, and multicore coordination do not belong to Sixth
+Edition. Its file-system log is also a teaching design, not a feature
+that should be retroactively attributed to the original PDP-11 system.
+
+The differences are the point. Both systems support processes and files;
+the mechanisms maintaining those abstractions have changed.
+A uniprocessor implementation can rely on facts that fail as soon as two
+cores execute kernel code simultaneously. An implementation based on
+segments can organize memory in ways that a page-table implementation
+would not choose.
+
+Xv6 is also intentionally incomplete as a production system. It omits
+many policies and facilities required for hostile users, modern devices,
+large-scale performance, and long-running service. An educational mechanism
+can expose a principle without being a recommended implementation for
+all workloads. The supplied book itself repeatedly distinguishes its
+model from real-world systems.
+
+\section{History is evidence, not a benchmark competition}
+
+Comparing a modern Linux kernel with Sixth Edition by line count alone
+explains little. Modern kernels support many processors, devices,
+filesystems, networking protocols, security mechanisms, and compatibility
+obligations that the older system did not attempt. Some complexity is
+avoidable, but some records new responsibilities.
+
+Spinellis's Unix history repository offers another way to study change:
+follow artifacts and revisions across time. Its reconstruction combines
+snapshots and repositories, so early commit metadata is not equivalent
+to a contemporaneous developer log. The paper explicitly discusses its
+construction and limitations. Historical data must be interpreted as
+carefully as historical prose \parencite{spinellis}.
+
+The practical method is to hold an abstraction steady while comparing the
+work needed to implement it. How does each system prevent one process
+from overwriting another? How does each remember a blocked reader?
+How does each recover a file operation after a crash? Those questions
+produce a useful account of progress without pretending the later system
+was simply the earlier one with unnecessary decoration.
+
+The following chapters apply that method. They move from a program's
+execution, through competition for the processor, to persistent storage
+and communication. At every stage the visible interface remains smaller
+than the machinery required to keep its promise.

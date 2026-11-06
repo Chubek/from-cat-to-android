@@ -1,0 +1,185 @@
+\chapter{Wayland and the Ownership of a Frame}
+\label{ch:wayland}
+\index{Wayland}\index{GPU}\index{DRM/KMS}\index{buffers!graphics}
+
+\section{A different protocol boundary}
+
+Wayland, begun by Kristian Høgsberg in 2008, defines communication between
+clients and a compositor. The project's own overview emphasizes input
+handling and buffer management. Clients render their content; the
+compositor receives buffers, arranges surfaces, routes input, and controls
+presentation. Wayland is a protocol and supporting libraries, not one
+mandatory desktop implementation \parencite{wayland}.
+
+That last distinction matters in practical discussion. GNOME's Mutter,
+KDE's KWin, and compositors built with libraries such as wlroots can
+implement Wayland while differing in policy, extensions, integration,
+and behavior. A problem observed on one compositor is not automatically
+a property of every Wayland environment.
+
+The compositor can run on the hardware, inside another window system,
+or as a client of another compositor. The protocol does not require that
+every compositor directly owns a physical monitor. This flexibility also
+makes testing and nested sessions possible without redefining the basic
+client relationship.
+
+The new boundary reflects work already done by modern clients and
+compositors. It removes the need to treat historical server-side drawing
+operations as the center of the architecture. It does not remove the
+underlying difficulty of graphics hardware, input devices, or desktop
+integration.
+
+\section{Follow a frame from application to display}
+
+An application decides that part of its content has changed.
+Its toolkit and rendering libraries produce pixels in a buffer.
+The client associates that content with a surface and commits an update
+through the Wayland protocol. The compositor then considers the surface
+alongside other surfaces and the current output configuration.
+
+If composition is needed, the compositor combines content into an output
+image, often using the GPU. If conditions permit, it may present a client
+buffer more directly. Kernel modesetting facilities control display
+configuration and presentation at the hardware boundary.
+The exact path depends on drivers, formats, scaling, monitors, and policy.
+
+The frame therefore passes through several agreements:
+
+\begin{center}
+\begin{tabular}{p{0.24\textwidth}p{0.62\textwidth}}
+\toprule
+Participant & Principal responsibility \\
+\midrule
+Client and toolkit & Content, layout, rendering, application interaction \\
+Compositor & Surface arrangement, input routing, presentation policy \\
+Userspace driver & Rendering API implementation and device commands \\
+Kernel graphics driver & Hardware resource management and display control \\
+Display hardware & Scanout and physical output \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This is a responsibility map, not a claim that each row is a separate
+process or that every frame takes an identical route. The map prevents
+one common confusion: a rendering API, display protocol, and graphics
+driver solve related but different problems.
+
+\section{A buffer is more than a pointer}
+\index{dma-buf}\index{synchronization!graphics}
+
+A software-rendered client can use shared memory for pixel storage.
+Accelerated rendering commonly uses mechanisms that let participants
+refer to graphics buffers without copying every pixel through the
+protocol connection. Linux dma-buf is important in sharing such resources
+across components.
+
+Sharing requires agreement on dimensions, pixel format, layout modifiers,
+and access. A buffer whose bytes are meaningful to one driver may not be
+usable by another participant without a compatible import path.
+A handle transfers a reference to storage; it does not automatically
+transfer a complete understanding of its representation.
+
+Timing is equally important. Rendering may still be in progress when the
+client submits the buffer. The compositor must know when it is safe to
+read, and the client must know when storage can be reused.
+Implicit and explicit synchronization provide different ways to express
+these dependencies. Support varies with the complete driver and compositor
+stack, not merely with the name of the protocol.
+
+This is the graphics version of the lifetime problems already encountered
+in files and processes. Reusing a buffer too early can corrupt a frame;
+retaining it forever leaks resources. A smooth desktop depends on these
+agreements being maintained many times per second.
+
+\section{Security changes useful habits}
+
+Wayland's core model does not grant an ordinary client a general right to
+inspect every other surface or capture every keystroke.
+Input is routed by the compositor, and access to wider desktop information
+requires additional mechanisms and policy. This supports stronger
+separation among applications than the traditional shared-trust X model.
+
+The change affects legitimate software as well as attackers.
+Screen capture, remote control, global shortcuts, automation, input
+methods, and accessibility tools need carefully designed interfaces.
+A feature that once worked by observing the whole display cannot simply
+reuse that route when the route is deliberately absent.
+
+Desktop portals and services such as PipeWire provide important pieces
+of modern Linux capture and sharing workflows. A portal can mediate a
+request and obtain user consent; a media service can carry selected
+streams. The details depend on desktop and portal implementation.
+Saying ``Wayland supports screen sharing'' is less informative than naming
+the complete path and the versions that supply it.
+
+Security is therefore an integration project, not only a restriction.
+If an architecture removes a broad authority, it needs usable replacements
+for legitimate tasks. Otherwise users and developers will seek workarounds
+that restore the old authority through less visible channels.
+
+\section{Extensions carry the rest of the desktop}
+
+A minimal core protocol cannot describe every need of a complete desktop.
+Extensions cover matters such as toplevel window roles, decorations,
+output information, presentation timing, and other specialized behavior.
+Some protocols are widely standardized; others are experimental or tied
+to particular compositor communities.
+
+This creates a familiar balance. Keeping the core small makes it easier
+to understand and preserve. Leaving too much outside a common agreement
+can produce inconsistent capabilities across environments.
+Protocol development consequently requires coordination among toolkits,
+compositors, application authors, and sometimes driver developers.
+
+Fractional scaling illustrates the issue. A logical application coordinate
+and a physical output pixel need not have a one-to-one relationship.
+Applications, toolkits, and compositors must agree on buffer scale,
+resampling, and appropriate sizes. Mixed-density monitors make the problem
+more demanding. A feature cannot be reduced to a single checkbox in the
+core protocol.
+
+Color management, high-dynamic-range presentation, and variable refresh
+introduce further contracts. Their development changes rapidly, so this
+book avoids a blanket claim that every Wayland desktop offers the same
+capabilities. The stable historical point is that presentation policy
+has moved toward a compositor-centered architecture while detailed
+agreements continue to evolve.
+
+\section{Xwayland makes migration incremental}
+\index{Xwayland}
+
+A display transition cannot require every application to be rewritten at
+once. Xwayland runs an X server as a Wayland client, allowing many existing
+X applications to appear within a Wayland session. It preserves the older
+application protocol while adapting presentation to the newer environment.
+
+Compatibility has limits. An application relying on global X behavior
+may not receive equivalent authority over the whole Wayland desktop.
+Input, scaling, capture, and window-management details can differ.
+The compatibility layer is a bridge between contracts with different
+assumptions, not a promise that those assumptions have become identical.
+
+The arrangement resembles other successful transitions in Unix history.
+A stable interface protects existing software while a lower layer changes.
+The bridge lets institutions migrate in stages, but it also adds a
+component whose bugs and performance must be understood.
+Compatibility reduces the cost of change without making change costless.
+
+\section{A new display system, the same engineering questions}
+
+Wayland is often discussed as a contest between desktop preferences.
+The more useful technical questions concern ownership and authority.
+Who renders? Who may inspect a surface? Who routes a key?
+Who owns a buffer at a given instant? Which component can prove the GPU
+has finished writing it?
+
+Those questions connect the graphics stack to the rest of the book.
+A buffer needs a lifetime, a protocol needs versioning, an extension needs
+adoption, and a security boundary needs a practical user experience.
+The replacement of one display protocol is therefore both a technical
+and an institutional history.
+
+Unix graphics has moved from printing characters to composing GPU-rendered
+surfaces without reaching a final arrangement. Each stage made a different
+set of assumptions economical. The enduring work is to identify those
+assumptions clearly enough that the next stage can change them.

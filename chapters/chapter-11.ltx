@@ -1,0 +1,179 @@
+\chapter{Files, Blocks, and the Problem of Tomorrow}
+\label{ch:files}
+\index{filesystems}\index{inodes}\index{buffer cache}\index{persistence}
+
+\section{A name is a route to an object}
+
+A pathname is not the file itself. It is a route through directories to
+an object. A directory associates names with filesystem identifiers;
+an inode records metadata and information about where a file's contents
+can be found. The precise on-disk layout varies, but separating names
+from objects is a central Unix idea.
+
+A hard link adds another directory entry referring to the same object.
+A symbolic link stores a path to be interpreted during lookup.
+Their behavior differs when targets move, disappear, or cross filesystem
+boundaries. A hard link ordinarily cannot cross the boundary between
+filesystems because the identifier it stores belongs to one filesystem's
+namespace. A symbolic link can name a path that resolves elsewhere.
+
+Permission checking also follows the route. Finding a file requires the
+appropriate search permission on directories along the way, not merely
+read permission on the final object. Reading a directory's list of names
+and searching it for a known name are distinct operations. This is one
+reason a simple ``read/write/execute'' summary can mislead when applied
+to directories \parencite[ch. 4]{apue}.
+
+\section{Three levels of an open file}
+\index{file descriptors}\index{open file descriptions}
+
+A descriptor is an integer in a process's descriptor table.
+It refers to kernel state for an open file description, which in turn
+refers to an underlying object. The description contains properties such
+as the current offset and relevant status flags. Multiple descriptors
+can share it through duplication or inheritance.
+
+If a parent forks, an inherited descriptor can refer to the same open
+file description in parent and child. Their reads can consequently affect
+a shared offset. If they independently open the same pathname, they
+normally acquire separate descriptions with separate offsets.
+The underlying file can be identical in both cases; the opening state is
+what differs.
+
+A compact diagram captures the distinction:
+
+\begin{center}
+\begin{tikzpicture}[every node/.style={draw,font=\small,align=center}]
+\node (a) at (0,0.7) {Parent fd};
+\node (b) at (0,-0.7) {Child fd};
+\node (o) at (4,0) {Open description\\offset, flags};
+\node (i) at (8,0) {Filesystem object\\metadata, blocks};
+\draw[->] (a) -- (o);
+\draw[->] (b) -- (o);
+\draw[->] (o) -- (i);
+\end{tikzpicture}
+\end{center}
+
+Lions traces the corresponding file and inode tables in Sixth Edition.
+Modern terminology and structures vary, but the lifetime distinction
+remains useful. It explains why closing one descriptor need not close
+all access to the object, and why descriptor leaks are resource leaks
+rather than merely unused integers \parencite[ch. 18]{lions}.
+
+Unlinking removes a name. A file can continue to exist while an open
+reference remains after its last directory link is removed.
+Reclamation follows the relevant link and reference lifetimes.
+This makes temporary-file patterns possible, but secure temporary-file
+creation requires more than inventing a name from a process ID.
+The historical practice described by Lions should not be copied as modern
+security guidance.
+
+\section{Bytes become blocks}
+
+The file interface lets a program read a range of bytes.
+The storage device transfers blocks or sectors under different constraints.
+The kernel maps logical file positions to storage locations and keeps
+partial transfers and metadata out of the application's ordinary logic.
+The abstraction is convenient because applications need not know the
+disk's physical geometry.
+
+Sixth Edition uses its own inode addressing scheme, including the
+historical distinction between small and large files. Thompson's later
+implementation paper describes another layout with ten direct addresses
+and indirect levels. These are different snapshots. The commonly taught
+modern diagram of direct, single-indirect, double-indirect, and
+triple-indirect pointers must not be pasted over every historical inode
+\parencite[ch. 19]{lions}\parencite[sec. 4]{implementation}.
+
+Indirect addressing trades metadata work against maximum size and
+compactness for small files. A small file can avoid traversing several
+levels of mapping. A large file can acquire more blocks without requiring
+an enormous fixed-size inode. Modern extent-based designs instead describe
+ranges of contiguous storage. Each representation encodes assumptions
+about allocation, fragmentation, and common workloads.
+
+The buffer cache keeps recently used blocks in memory and coordinates
+access to blocks already being read or modified. A cache entry is not
+just a bag of bytes. It has identity, state, ownership rules, and a
+relationship to outstanding I/O. Two callers must not independently
+modify unrelated cached copies of what is supposed to be one authoritative
+block.
+
+\section{Locality is a policy decision}
+
+FFS improved performance by recognizing that the filesystem's allocation
+policy affects the physical work required from the disk. Nearby metadata
+and file blocks can reduce seeks; larger transfers can make better use
+of bandwidth. Fragments reduce the internal waste that larger blocks
+would otherwise impose on small files \parencite{ffs}.
+
+Those choices reveal a limit of purely interface-oriented reasoning.
+Two filesystems can present the same read and write calls while differing
+dramatically in latency and throughput. An abstraction hides physical
+layout from applications; it does not make physical layout irrelevant
+to the implementation.
+
+Solid-state storage changes the cost model. There is no mechanical seek,
+but erase blocks, write amplification, controller behavior, queue depth,
+and durability guarantees still matter. A policy optimized for one device
+can become unnecessary or counterproductive on another. The enduring
+Unix interface is compatible with repeated changes to the assumptions
+beneath it.
+
+\section{A successful write is not the whole durability story}
+\index{fsync}\index{journaling}\index{crash recovery}
+
+A program may write data that remains in a kernel cache.
+The call's success can mean that the kernel accepted the bytes, not that
+all relevant storage has survived a sudden power loss. Buffered libraries
+add another layer: flushing a user-space buffer is different from requesting
+that the kernel synchronize data to durable storage.
+
+A file operation often modifies several blocks. Creating a file can
+require an inode allocation, directory entry, allocation bitmap or free
+list, and timestamps. If a crash preserves only some modifications,
+the filesystem can contain contradictory claims about ownership.
+A checker can repair certain inconsistencies after restart, but repair
+may lose information or require expensive scanning.
+
+Journaling records enough intent or changed state to make recovery
+controlled. Copy-on-write filesystems use a different family of techniques,
+writing new structures before switching references. Neither label alone
+specifies every application-level durability guarantee. Metadata
+consistency, data persistence, and the atomicity of a multi-file application
+update are different properties.
+
+The supplied xv6 filesystem uses a simple physical redo log.
+Changed blocks are recorded in the log; a committed header marks a
+transaction as recoverable; installation copies logged blocks to their
+home locations. Recovery replays a committed transaction after restart.
+Large writes are split to fit the log, so one application write is not
+necessarily one indivisible persistent transaction
+\parencite[sec. 7.5--7.6]{xv6}.
+
+This is an excellent teaching mechanism because the commit point is
+visible. It is not evidence that hardware can never tear a write or reorder
+I/O. Real systems must match their protocol to the storage contract,
+including flushes, barriers, checksums, or other mechanisms as required.
+A recovery proof depends on what the device promises to preserve.
+
+\section{Replacing a file safely takes more than rename}
+
+Applications often write a new temporary file and rename it into place.
+Within the specified same-filesystem conditions, rename can provide an
+atomic namespace replacement to concurrent readers. That is a valuable
+property: readers need not observe a half-written new file through the
+final name.
+
+Crash durability is a separate question. Depending on the filesystem and
+platform, an application may need to synchronize the temporary file,
+perform the rename, and synchronize the containing directory to preserve
+the intended result across a crash. Cross-filesystem moves and updates
+involving several names require different reasoning. The correct sequence
+must be checked against the target system's guarantees.
+
+This distinction between visibility and persistence is the filesystem's
+version of a broader theme. A clean interface can make ordinary operation
+simple while leaving exceptional guarantees explicit. Unix made files
+easy to manipulate; reliable storage engineering still requires asking
+what happens when the machine stops between two steps.

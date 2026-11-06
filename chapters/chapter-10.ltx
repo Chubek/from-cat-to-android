@@ -1,0 +1,171 @@
+\chapter{Who Runs Next?}
+\label{ch:concurrency}
+\index{scheduling}\index{concurrency}\index{interrupts}\index{locking}
+
+\section{Concurrency begins before a second processor}
+
+A machine with one processor can still have concurrent activity.
+A process may be suspended while another runs; a device can complete an
+operation while code is manipulating a related structure. The execution
+is interleaved rather than physically simultaneous, but the program must
+still account for more than one possible ordering.
+
+This distinction is essential when reading Lions. Sixth Edition's
+uniprocessor kernel could rely on the fact that ordinary kernel execution
+was not preempted by another process at an arbitrary C statement.
+A process gave up the processor at explicit points, especially when
+sleeping. Interrupt handlers were a different source of interleaving and
+required their own discipline \parencite[sec. 8.16]{lions}.
+
+An algorithm correct under these assumptions can fail immediately on a
+multiprocessor. Disabling interrupts on one core does not prevent another
+core from changing shared memory. Nor does the absence of an explicit
+sleep guarantee that a second core is not already inside the same function.
+Historical code must be read with its execution model attached.
+
+\section{A context switch preserves a continuation}
+\index{context switching}
+
+A scheduler chooses runnable work. A context switch makes that choice
+real by saving one execution context and restoring another. Registers,
+stack state, address-space state, and bookkeeping all contribute to the
+ability to continue a suspended computation.
+
+Not every switch saves every piece of state in the same place.
+A trap may already have saved user registers in a trap frame. A kernel
+context switch may save only the registers needed to resume a kernel
+continuation. Confusing these records leads to the false expectation that
+one structure contains the entire process at every moment.
+
+In xv6, the relationship among a process's kernel context, its trap frame,
+and the per-CPU scheduler context is explicit. The low-level switch
+function transfers execution between carefully arranged stacks.
+A caller eventually returns along a control path that can look surprising
+if the reader assumes every return corresponds to the immediately
+preceding chronological call on the same CPU \parencite[ch. 6]{xv6}.
+
+A switch also costs more than the instructions that save registers.
+Caches may contain another process's working set; translation state may
+need adjustment; the new process may run on a different core.
+Scheduling policy therefore interacts with memory locality and processor
+topology. ``Always run the next waiting process immediately'' is not a
+complete performance policy.
+
+\section{Runnable is different from running}
+
+A process waiting for disk input cannot use the CPU productively merely
+because its priority is high. It needs an event to make progress.
+A runnable process has work it can execute; a running process is currently
+executing; a sleeping process waits for some condition. Real kernels use
+more detailed states, but this distinction is fundamental.
+
+Scheduling policies balance responsiveness, throughput, fairness,
+accounting, and sometimes deadlines. These goals can conflict.
+Giving interactive work prompt service can improve perceived performance
+while delaying a long computation. Keeping a task on one core can improve
+locality while leaving another core temporarily less busy.
+
+Historical Unix scheduling used priorities and feedback related to CPU
+use. Production systems have repeatedly revised these mechanisms as
+hardware and workloads changed. It is safer to explain the policy's goals
+than to treat one version's formula as the definition of Unix scheduling.
+The same applies to claims that one scheduler is universally ``fair'':
+fairness requires a stated unit, population, and time scale.
+
+\section{The lost wakeup is a missing agreement}
+\index{sleep and wakeup}\index{lost wakeups}
+
+Suppose a consumer needs an item from an empty queue. It checks the queue,
+then prepares to sleep. A producer inserts an item and sends a wakeup in
+between those two actions. If wakeups are not remembered and the consumer
+has not yet registered its sleep, the notification reaches nobody.
+The consumer then sleeps despite work being available.
+
+The problem is not that the producer forgot to send a notification.
+It is that checking the condition and registering the wait were not
+coordinated with the producer's update. Thompson's implementation paper
+explains that event wakeups do not themselves retain a count of past
+events. The surrounding protocol must close the race
+\parencite[sec. 2.3]{implementation}.
+
+The usual conceptual pattern is:
+
+\begin{verbatim}
+lock the condition's lock
+while the condition is false:
+    sleep, atomically releasing that lock
+    resume with that lock held again
+perform the protected operation
+unlock
+\end{verbatim}
+
+This is pseudocode. A concrete sleep primitive must define precisely how
+it transfers protection between the condition lock and the bookkeeping
+that records the sleeping process. Xv6 demonstrates such a protocol using
+process locks and a channel associated with the event
+\parencite[sec. 6.5]{xv6}.
+
+The loop is important. A wakeup means the condition may have changed,
+not that this particular waiter owns the resource. Another waiter can win
+the race, several waiters can be awakened, or a more general interface can
+permit spurious wakeups. The condition is the truth; the notification is
+an invitation to check it again.
+
+\section{Locks protect invariants}
+\index{spinlocks}\index{deadlock}\index{memory ordering}
+
+A lock does not make a variable correct by proximity. It protects an
+invariant maintained by all code participating in the protocol.
+For a queue, the invariant might connect a head pointer, tail pointer,
+item count, and links. Updating only one field under the lock while
+reading related fields without protection can still expose an impossible
+state.
+
+Spinlocks wait by repeatedly attempting acquisition. They are appropriate
+only when the holder will release promptly and the waiting context can
+afford to spin. A sleeping lock allows the waiter to relinquish the CPU,
+but cannot be used indiscriminately in interrupt context or while holding
+resources whose progress requires that same CPU.
+
+Atomic machine instructions make acquisition indivisible, but hardware
+and compilers can reorder ordinary memory operations. Acquire and release
+semantics establish the ordering needed for one core to observe changes
+made under the lock by another. An implementation that works accidentally
+on one processor's memory model can fail on a weaker one.
+
+Deadlock appears when dependencies form a cycle: one participant holds A
+while waiting for B, another holds B while waiting for A. A consistent
+lock order prevents many such cycles. Avoiding sleep while holding certain
+locks prevents others. Lock ordering must be documented at subsystem
+boundaries, where a locally reasonable acquisition can complete a global
+cycle nobody intended.
+
+Xv6 deliberately exposes these issues. Its small size lets the reader
+follow where a lock is acquired, why interrupts are controlled, and how
+ownership may be transferred across scheduling. Modern kernels add more
+specialized mechanisms, including read-copy-update and lock-free
+structures, but those techniques still require explicit lifetime and
+ordering arguments.
+
+\section{The hard part is preserving progress}
+
+Mutual exclusion alone does not guarantee useful behavior.
+A process can starve if other work repeatedly overtakes it. A low-priority
+holder can delay high-priority work, producing priority inversion.
+A wakeup strategy can awaken many processes that mostly return to sleep,
+creating a thundering herd. Performance failures can arise from a protocol
+that is technically free of data races.
+
+The best starting point is to state both safety and progress properties.
+Safety might say that an object is never freed while a user holds a
+reference. Progress might say that a waiting operation eventually receives
+a chance to run when its resource becomes available. Each needs different
+evidence. Stress testing can reveal violations, but a successful run is
+not a proof that all interleavings are safe.
+
+This is why concurrency occupies so much of kernel engineering.
+The visible interface often promises a simple result, while the
+implementation must maintain that result across interruptions, scheduling,
+and simultaneous execution. The complexity is concentrated around the
+moments when one computation depends on another. Understanding those
+moments makes the rest of the kernel much easier to read.

@@ -1,0 +1,194 @@
+\chapter{The Art, and the Limits, of Unix Programming}
+\label{ch:philosophy}
+\index{Unix philosophy}\index{Raymond, Eric S.}\index{modularity}\index{policy and mechanism}
+
+\section{A tradition becomes a set of principles}
+
+Eric S. Raymond's \emph{The Art of UNIX Programming} gathers a design
+tradition that had previously been carried through tools, books,
+conversations, and example programs. Its rules concern modularity,
+clarity, composition, separation, simplicity, transparency, representation,
+and other habits. The value is not that every Unix program follows them.
+It is that the rules make intentions available for examination
+\parencite[ch. 1]{raymond}.
+
+Ritchie had already offered a less celebratory view in his 1977
+retrospective, discussing reliability, security, and areas where Unix
+had invested little effort. The designers' willingness to name those
+limits is part of the tradition too. Criticism is most useful when it
+states a workload, a failure, and an assumption that can be examined,
+rather than treating either admiration or irritation as sufficient evidence
+\parencite{retrospective}.
+
+They are best read as engineering pressures rather than universal laws.
+A small interface can conceal an enormous implementation. A larger program
+can offer a clearer conceptual model than five fragile adapters.
+A text format can improve inspection or become an ambiguous private
+language that nobody has documented. The desired property must be
+identified before the slogan can help.
+
+Raymond's account is also historically situated. Published in the early
+2000s, it reflects experience accumulated before today's mobile and cloud
+environments took their current shape. Its observations remain useful,
+but later systems provide new tests. A camera application, a compositor,
+and a kernel driver do not divide naturally into the same pieces as a
+line-oriented report generator.
+
+\section{Composition needs a shared grammar}
+
+A program becomes composable when another program can use its behavior
+without relying on accidental details. Standard input and output help,
+but they are only transport. The real agreement includes record boundaries,
+encoding, ordering, errors, and versioning.
+
+Imagine a tool that reports storage usage. Human-readable output might
+contain aligned columns, abbreviated units, and translated headings.
+That is pleasant for a person but awkward for a parser.
+A machine-readable mode can provide explicit fields and stable units.
+Both views can be useful; forcing one to serve both audiences often
+produces a brittle compromise.
+
+JSON, CSV, and other structured formats address some problems while
+introducing their own contracts. CSV needs an agreed dialect and escaping
+rules. JSON distinguishes some value types but does not automatically
+supply a schema or preserve every numeric representation.
+Newline-delimited text remains excellent for many simple tasks.
+The right choice depends on what ambiguities the application can tolerate.
+
+Composition also needs failure semantics. If a producer stops halfway
+through a dataset, can the consumer distinguish incomplete output from
+a complete shorter dataset? Does the pipeline preserve the failing status?
+Can a retry duplicate effects? A clean data format without a clean failure
+protocol is only half an interface.
+
+\section{Clarity includes the invisible state}
+
+Raymond's preference for clarity over cleverness is especially valuable
+when examining state. A compact function can still depend on a large
+implicit machine: environment variables, global settings, current
+directory, cached credentials, or a sequence of prior calls.
+Line count is a poor measure of how much a maintainer must remember.
+
+A clearer design makes legal transitions visible. A connection may be
+uninitialized, connected, closing, or closed. If unrelated booleans encode
+those states, impossible combinations can appear. An explicit
+representation can reduce the number of questions every caller must ask.
+The lesson applies to ordinary applications as much as to kernels.
+
+Transparency means making relevant behavior observable.
+It does not mean dumping every internal detail into the user's interface.
+A person submitting a form needs a useful explanation of failure, while
+an operator may need a trace identifier and diagnostic record.
+Different audiences need different views of the same event.
+
+This is a productive extension of the Unix tradition. Files, logs,
+tracing tools, and stable interfaces can expose enough state to diagnose
+problems without requiring every user to become an administrator.
+Visibility should serve an actual decision or investigation.
+
+\section{Policy cannot be eliminated}
+
+Separating policy from mechanism can preserve flexibility.
+A display server can provide operations while a window manager chooses
+placement and decoration. A scheduler can provide accounting and
+priorities while an administrator assigns limits. Such boundaries allow
+one component to evolve without rebuilding everything around it.
+
+Yet a mechanism still embodies choices. Which objects exist, which
+operations are possible, and what defaults apply all constrain policy.
+If an interface allows only one global clipboard or assumes every input
+device has the same coordinate model, later policy cannot easily repair
+the limitation.
+
+Raymond acknowledges a practical cost: when users can choose policy,
+they may also have to choose it. Experts may welcome the freedom;
+newcomers may experience a burden. An operating system that offers ten
+ways to solve an ordinary problem has not automatically made that problem
+easy \parencite[discussion of mechanism and policy]{raymond}.
+
+Good defaults are therefore compatible with modularity.
+A well-integrated environment can offer a standard policy while retaining
+an interface for replacement. The challenge is to make customization
+possible without making customization mandatory for basic competence.
+
+\section{Critics are part of the evidence}
+\index{UNIX-HATERS Handbook}
+
+\emph{The UNIX-HATERS Handbook} is polemical, frequently funny, and often
+unfair in its rhetoric. It is nevertheless valuable evidence of frustration
+with shells, terminals, mail, networking, graphics, and tools that experts
+had learned to tolerate. Its existence prevents a comfortable history in
+which every inconvenience was an intentional virtue \parencite{haters}.
+
+A complaint about cryptic names can point to discoverability.
+A complaint about inconsistent options can point to interface debt.
+A complaint about editing configuration files can point to missing
+validation and poor recovery. The author's tone does not determine whether
+the underlying problem is real.
+
+The empirical reliability work of Miller, Fredriksen, and So provides a
+different form of criticism. Their 1990 study tested almost ninety utilities
+across seven Unix versions with random input and reported crashes in more
+than 24 percent of the programs tested. These were results for that
+sample and method, not a current failure rate for all Unix software
+\parencite{fuzz}.
+
+The finding matters because the utilities were familiar and frequently
+used. Repetition in ordinary operation had not exposed every malformed
+input path. A reputation for maturity did not substitute for deliberate
+adversarial testing. The broader lesson is that simple interfaces and
+long service can coexist with serious implementation defects.
+
+\section{Security tests the boundaries of convenience}
+
+Text-oriented tools are easy to combine, but accepting arbitrary text as
+commands can create injection vulnerabilities. A program that constructs
+a shell command by concatenating untrusted values grants those values
+access to the shell's syntax. Passing an explicit argument array to a
+program avoids that particular interpretation step, though the target
+program's own option and input semantics still require care.
+
+Environment variables and search paths are convenient forms of implicit
+configuration. They can also redirect execution toward an unintended
+program or library. Privileged code must establish a trustworthy context
+rather than inherit every convenience of an interactive session.
+A boundary that is harmless among cooperating local users may be unsafe
+when an attacker controls one side.
+
+Minimalism does not guarantee security either.
+A small parser written in unsafe code can still have a memory error.
+A large service may use privilege separation and carefully constrained
+interfaces to limit the effect of a bug. The relevant questions concern
+attack surface, authority, validation, lifetime, and recoverability.
+
+The Unix tradition contributes useful tools to that analysis, especially
+process boundaries and explicit interfaces. It also leaves historical
+baggage, including broad ambient authority within a user account.
+Later systems have had to add stronger confinement mechanisms when the
+original trust assumptions no longer fit.
+
+\section{A worked design choice: one tool or several?}
+
+Suppose a team needs to import measurements, validate them, compute a
+summary, and produce a chart. Separate tools make intermediate data easy
+to inspect and permit replacement of the chart renderer. A single program
+can preserve typed values, perform shared validation once, and report
+errors in one consistent vocabulary.
+
+The decision depends on the boundaries. If the stages already have stable,
+useful representations, separate tools can work well. If every stage
+requires access to the same complex mutable structure, forcing the data
+through lossy text adapters can make the system worse.
+The right module may be a library rather than a process.
+
+A useful compromise is to separate an engine from its interfaces.
+A library can implement the core operations; a command-line frontend can
+support automation; a graphical frontend can support exploration.
+The shared engine prevents inconsistent calculations, while explicit
+external formats preserve interoperability.
+
+This design follows the spirit of Unix without mechanically reproducing
+its earliest packaging. It concentrates responsibility, keeps important
+interfaces inspectable, and lets users work in the mode suited to them.
+The tradition remains valuable when it provides questions to ask, rather
+than a verdict announced before the program's requirements are known.

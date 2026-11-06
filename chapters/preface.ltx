@@ -1,0 +1,63 @@
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+
+One end of this story is a phototypesetter. The other is a phone. Between
+them lie minicomputers, university computer rooms, engineering workstations,
+Internet servers, and machines small enough to disappear inside other
+products. A system made to provide a congenial place for programming became
+an infrastructure for people who would never willingly type a shell command.
+That change is the subject of this book.
+
+The C/A/T in the title is the Graphic Systems phototypesetter used at Bell
+Labs. It is not the \texttt{cat} command, although that small command belongs
+to the same story. Typesetting made Unix useful beyond the circle of its
+implementers. Android demonstrates a different kind of reach: a Unix-like
+kernel can underpin an environment whose everyday interface scarcely
+resembles a time-sharing terminal. Neither endpoint was inevitable.
+
+This is both a history and an explanation of working machinery. The first
+part follows the formation and spread of Unix. The second opens the kernel,
+using John Lions's Sixth Edition commentary and the supplied October 2019
+RISC-V edition of xv6 as deliberately different specimens. The third studies
+programming tools and visual interfaces. The fourth follows Unix ideas into
+servers, games, and phones. Chapters can be read separately, but earlier
+distinctions between an interface, an implementation, and an institution
+make the later chapters easier to understand.
+
+The intended reader is curious about computing and comfortable encountering
+small fragments of shell and C. No prior kernel course is assumed. The
+examples explain a mechanism rather than offer production libraries. Where
+an example omits error handling or describes pseudocode, the text says so.
+The practical investigations in the appendices use temporary data and do
+not require administrative privileges.
+
+The supplied \texttt{sources/} collection is the historical and technical
+foundation. It contains duplicates, empty files, OCR errors, translated
+editions, and filenames that do not reliably identify their contents. The
+bibliography and source notes identify the actual works used. Citations
+prefer section names when extraction has made page numbers unreliable.
+All narrative, comparisons, and worked examples here are newly written;
+this book does not reproduce the supplied books or their source listings.
+
+Later developments require additional explanation. The chapters on Wayland,
+containers, Android, and gaming combine established systems knowledge with
+the official project documentation identified in the bibliography. This is
+a structural account, not a release catalogue or a market-share survey.
+The modern discussion has an editorial cutoff of 6 November 2026; it makes
+no claim that a particular game, device, or distribution behaves identically
+across versions.
+
+Several words need care. \emph{Unix} names a historical family and a design
+tradition. \emph{UNIX} also names a trademark tied to certification.
+\emph{Linux} strictly names a kernel, although people commonly use it for
+complete systems assembled around that kernel. \emph{Free software} concerns
+user freedoms; \emph{open source} concerns an overlapping licensing and
+development movement. These meanings intersect without becoming synonyms.
+
+There is no single protagonist. Thompson and Ritchie matter, as do Ossanna,
+McIlroy, Cherry, Kernighan, the Berkeley groups, Stallman, Torvalds, and many
+less visible maintainers and users. The recurring actor is the interface:
+the agreement that lets one person's work become another person's building
+material. An interface can preserve freedom, conceal complexity, transmit a
+mistake, or harden into a barrier. Following those agreements helps explain
+how Unix endured while so much of its original machinery disappeared.

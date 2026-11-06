@@ -33,15 +33,33 @@
 \RequirePackage{geometry,setspace,parskip}
 \geometry{margin=30mm,bindingoffset=6mm,includeheadfoot}
 \setstretch{1.1}
+\RequirePackage{microtype,fancyhdr,fvextra,emptypage}
+\setlength{\emergencystretch}{2em}
+\setlength{\headheight}{18pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\small\thepage}
+\fancyhead[LO,RE]{\small\nouppercase{\leftmark}}
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter.\ #1}{}}
+\renewcommand{\headrulewidth}{0pt}
+\DefineVerbatimEnvironment{verbatim}{Verbatim}{%
+  fontsize=\fontsize{10.5}{13}\selectfont,breaklines=true,samepage=true}
+% These manuscript examples are short: keep each complete listing together.
+\BeforeBeginEnvironment{verbatim}{%
+  \par\smallskip\noindent\begin{minipage}{\linewidth}}
+\AfterEndEnvironment{verbatim}{\end{minipage}\par\smallskip}
 \RequirePackage{array,booktabs,tikz}
 \RequirePackage{xparse,xspace}
 
 \RequirePackage[backend=biber,style=authoryear,sorting=nyt]{biblatex}
+\renewcommand*{\bibfont}{\small}
 \RequirePackage[xindy]{imakeidx}
-\makeindex
+% latexmk runs texindy externally, including when shell escape is disabled.
+\makeindex[noautomatic,intoc]
 
 % Load links after the document packages, and cleveref after hyperref.
 \RequirePackage[unicode]{hyperref}
+\RequirePackage{xurl}
 \hypersetup{hidelinks}
 \RequirePackage{cleveref}
 \endinput

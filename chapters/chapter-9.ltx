@@ -1,0 +1,177 @@
+\chapter{Processes, Traps, and the Illusion of a Private Machine}
+\label{ch:processes}
+\index{processes}\index{fork}\index{exec}\index{virtual memory}
+
+\section{A program is not a process}
+
+A program is a body of instructions and data in a form that can be loaded.
+A process is a running environment: an address space, execution state,
+credentials, open descriptors, and relationships to other processes.
+Several processes can execute the same program, while one process can
+replace its program image without becoming a new process.
+
+This distinction makes the Unix process interface unusually flexible.
+The shell can create a child process and arrange its environment before
+asking it to execute a particular program. Redirection and pipelines do
+not have to be implemented separately inside every command. They can be
+established through the process's inherited resources
+\parencite[ch. 8]{apue}.
+
+The private-machine illusion is qualified. Processes share the CPU,
+physical memory, filesystems, devices, and sometimes explicitly shared
+memory. Their clocks reflect scheduling and contention. Resource limits
+can stop growth, signals can interrupt work, and administrative action
+can end execution. The operating system provides isolation and controlled
+sharing, not an infinitely capable imaginary computer.
+
+\section{Creation and replacement are separate operations}
+
+In the familiar interface, \texttt{fork} creates a child with a closely
+related initial state. Parent and child continue after the call with
+different return values. Their address spaces are logically separate,
+although an implementation may initially share physical pages using
+copy-on-write. That optimization is common in modern systems; it is not
+a requirement of the interface and should not be assumed for the supplied
+xv6 implementation.
+
+An \texttt{exec} operation replaces the current program image. It does not
+create a child. A successful exec preserves the process identity while
+changing the executable code, stack, and much of the memory environment.
+Selected process properties survive, including descriptors not marked
+close-on-exec. The exact rules belong to the specified interface and
+implementation.
+
+The separation lets a shell perform a sequence that can be described
+schematically as follows:
+
+\begin{verbatim}
+create child
+    in child:
+        bind chosen input to descriptor 0
+        bind chosen output to descriptor 1
+        close unused descriptors
+        execute requested program
+    in parent:
+        close no-longer-needed pipe ends
+        wait or continue as the command requires
+\end{verbatim}
+
+This is pseudocode, not a complete C implementation. Real code must
+handle failures at every stage, avoid leaking descriptors, and choose
+appropriate behavior if execution fails. After fork in a multithreaded
+program, the child also faces restrictions before exec because it inherits
+an address space whose other threads no longer exist in that child.
+An apparently simple launch can carry difficult library-state assumptions.
+
+Other interfaces, including \texttt{posix\_spawn}, package common launch
+operations differently. Their existence does not invalidate the fork/exec
+model. It shows that an elegant abstraction can acquire performance and
+concurrency costs in environments unlike the one that first shaped it.
+
+\section{Entering the kernel changes authority}
+\index{system calls}\index{user mode}\index{supervisor mode}
+
+A user program cannot safely be allowed to program device hardware or
+rewrite memory mappings at will. Hardware privilege levels constrain those
+operations. A system call crosses into a controlled entry path where the
+kernel interprets a request under the caller's credentials and the system's
+resource rules.
+
+A library function and a system call are not the same thing.
+A function such as a buffered I/O routine may do substantial work in user
+space and request kernel I/O only occasionally. A thin wrapper may arrange
+arguments and execute the architecture's trap instruction. The boundary
+that matters for protection is the controlled privilege transition, not
+whether a function name appears in a familiar header.
+
+On entry, the kernel must preserve enough register state to resume the
+caller. It needs a valid kernel stack and a known mapping environment.
+It must also treat user-supplied pointers as untrusted addresses, not as
+permission to access arbitrary kernel memory. The requested range may
+cross a page boundary, include an unmapped page, or become invalid under
+concurrent changes in a more elaborate system.
+
+The xv6 book's trap and page-table chapters make these transitions
+explicit. Its trampoline arrangement allows carefully controlled code to
+remain reachable across a page-table change. That is a RISC-V implementation
+technique in the supplied edition, not a generic synonym for every Unix
+system-call path \parencite[ch. 3--4]{xv6}.
+
+\section{Addresses need an interpreter}
+
+A virtual address is meaningful within a mapping context. Hardware
+translates it into a physical address and checks permissions. This lets
+two processes use the same numerical virtual address for unrelated data.
+It also lets the kernel map the same physical page into multiple address
+spaces when sharing is intentional.
+
+In the supplied xv6 Sv39 model, ordinary pages are 4096 bytes and page
+tables form a three-level tree. The address contains index fields and an
+offset within a page. Walking the tree locates a page-table entry whose
+physical page number and permissions determine whether the access can
+proceed. Real RISC-V also constrains valid address forms; unused upper
+bits are not a license to use arbitrary 64-bit values.
+
+The translation lookaside buffer caches recent translations, reducing the
+cost of repeated walks. Changing a page table may therefore require
+invalidating cached translations. On multiple cores, the kernel may need
+to coordinate invalidation across processors that could use the old
+mapping. A memory-protection decision can become a synchronization problem.
+
+Sixth Edition reaches a related goal through PDP-11 segmentation and
+swapping arrangements. Its small virtual spaces and hardware-specific
+mapping rules should be understood on their own terms. Saying that both
+systems provide protected address spaces is accurate; saying that they
+use the same virtual-memory implementation is not
+\parencite[ch. 2, 7, 15]{lions}.
+
+\section{Copy-on-write and faults as useful events}
+\index{copy-on-write}\index{page faults}
+
+A page fault does not always mean a programming error. It means an access
+could not complete under the current translation and permission state.
+A kernel can use that event to load data, allocate a page lazily, or perform
+a copy-on-write operation. An invalid access can instead cause the process
+to receive a signal or terminate.
+
+For copy-on-write, two address spaces initially refer to the same physical
+page with writes restricted. A write causes a fault. The kernel allocates
+and copies when necessary, updates the writer's mapping, and resumes the
+instruction. The process sees the logical result of independent memory
+without paying to copy every page at creation time.
+
+Correctness depends on reference counts, permissions, fault classification,
+and synchronization. A page cannot be freed while another mapping still
+uses it. The kernel must not mistake a genuinely read-only executable page
+for a copy-on-write page. The optimization is therefore a complete
+lifetime-management mechanism, not a single conditional in the fault handler.
+
+Production virtual-memory systems add file-backed mappings, anonymous
+memory, shared libraries, reclaim, swapping, huge pages, NUMA placement,
+and overcommit policies. These mechanisms affect both performance and
+failure behavior. A successful allocation request does not necessarily
+mean every future page access will obtain physical memory under all
+resource policies.
+
+\section{Exit must leave an account of what happened}
+\index{wait}\index{zombie processes}
+
+When a process exits, most of its resources can be released promptly.
+Its parent may still need an exit status and identifying information.
+A zombie is the residual record kept for that purpose, not a secretly
+executing program. Waiting lets a parent collect the result and permits
+the remaining record to be reclaimed.
+
+Parent-child relationships also need rules when a parent exits first.
+Traditional Unix arrangements reparent orphaned children to an appropriate
+system process; modern systems may have additional subreaper facilities.
+The exact policy differs, but the underlying requirement remains:
+termination must not leave an unreclaimable record simply because the
+original parent disappeared.
+
+This completes one traversal of the private-machine illusion.
+Creation establishes identity and resources; execution replaces a program;
+traps request services; mappings enforce isolation; faults support policy;
+and exit leaves enough evidence for coordination. The illusion works
+because the kernel remembers all these relationships even when a program
+need only think about its next instruction.

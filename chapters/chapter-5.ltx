@@ -1,0 +1,176 @@
+\chapter{The Workstation on the Engineer's Desk}
+\label{ch:workstations}
+\index{workstations}\index{Sun Microsystems}\index{Apollo}\index{Silicon Graphics}
+
+\section{Personal computing without surrendering the network}
+
+A workstation was not simply a small server with a monitor attached.
+Its appeal lay in combining local computational power, a high-resolution
+display, networking, and a serious software environment for one technical
+user. It changed the relationship between individual and institution.
+An engineer could control a responsive local machine while still sharing
+files, printers, mail, and compute resources with colleagues.
+
+The term covers a varied market. Sun systems made Unix and Ethernet a
+particularly visible combination. Silicon Graphics emphasized advanced
+graphics and visualization. Hewlett-Packard, IBM, DEC, and others supplied
+technical systems with their own architectures and Unix variants.
+Apollo's influential Domain environment was not initially a conventional
+Unix system, although later products incorporated Unix compatibility and
+services. Treating every workstation as an identical Unix box erases the
+competition that made the category interesting.
+
+Nor did the workstation eliminate time-sharing. A local machine could act
+as a window onto a remote host, execute some tasks itself, and submit
+larger work to a shared system. The new pattern distributed responsibility
+instead of simply replacing central computing. Network transparency became
+an attractive promise because users wanted resources to feel close even
+when the hardware was elsewhere.
+
+\section{Why Unix fit the market}
+
+Unix brought compilers, editors, a shell, file tools, and an established
+body of technical software. C made source-level portability plausible
+across changing processors. Universities had already trained people who
+knew the environment. Vendors could offer a machine that felt familiar to
+these users while differentiating through performance, graphics,
+peripherals, and support.
+
+This was a favorable division of labor, but not a guarantee of effortless
+portability. A program could depend on byte order, word size, undocumented
+library behavior, or a particular window toolkit. Binary compatibility was
+harder still: an executable built for a Motorola processor could not
+simply run on a SPARC or MIPS processor. Unix provided a common vocabulary
+for ports, not a universal executable format for every workstation.
+
+Vendor systems consequently mixed common practice with proprietary
+investment. SunOS, HP-UX, AIX, IRIX, and other systems supplied distinct
+administration tools, graphics stacks, drivers, and commercial applications.
+Their developers were solving real hardware and customer problems.
+Fragmentation was partly the result of legitimate specialization, even
+when it also served commercial lock-in.
+
+Libes and Ressler's \emph{Life with UNIX} captures the variety and
+enthusiasm of this environment. Its own production note is telling:
+the book was composed with FrameMaker on a Sun workstation and prepared
+for a phototypesetter through PostScript. Unix publishing had expanded
+from a local formatter and device into an ecosystem of commercial
+applications and interchangeable output paths \parencite{life}.
+
+\section{Shared files, shared assumptions}
+\index{NFS}\index{NIS}
+
+A networked desktop needs shared state. Sun's Network File System, first
+released in the mid-1980s, made remote files accessible through familiar
+filesystem operations. A mounted directory could refer to data on another
+machine. Existing applications could often use that data without learning
+a new explicit file-transfer workflow.
+
+The convenience concealed difficult semantics. Local file operations
+already have failure cases, but remote operations add unavailable servers,
+network partitions, retransmissions, and inconsistent caches. Early NFS's
+stateless server design simplified certain aspects of crash recovery,
+while shifting other responsibilities to clients and auxiliary services.
+Later NFS versions changed the balance. ``NFS is stateless'' is therefore
+an observation about particular versions, not a permanent definition.
+
+A laboratory also needed common user identities and configuration.
+Directory and naming services could save administrators from maintaining
+every machine independently. They could also propagate a mistaken entry
+or an overly trusting security assumption across a whole site. Shared
+convenience enlarged the consequences of a shared error.
+
+Diskless workstations made the dependence especially visible. A machine
+could have a powerful processor and a personal display while relying on
+network services to boot and obtain its root filesystem. Personal
+interaction did not imply local autonomy. An outage in an apparently
+remote administrative layer could stop an entire room of individual desks.
+
+\section{Graphics makes the machine a working instrument}
+
+Computer-aided design, scientific visualization, animation, and engineering
+analysis needed more than character terminals. A bitmap display could show
+multiple windows, diagrams, and images. Specialized graphics hardware
+could accelerate transformations and rendering. Unix processes could
+produce data that a graphical application interpreted in ways no line
+printer could represent effectively.
+
+Silicon Graphics illustrates the relationship between applications and
+system design. Graphics workloads encouraged attention to pipelines,
+geometry, memory bandwidth, synchronization, and display hardware.
+IRIX was part of a product whose value depended on the entire machine
+working well for demanding visual tasks. A kernel benchmark alone could
+not describe that value.
+
+At the same time, workstation graphics was not one settled architecture.
+Some environments used proprietary window systems; others adopted X;
+toolkits and desktop conventions competed. The user could encounter a
+common operating-system ancestry through an interface with radically
+different menus, fonts, and interaction rules. Later chapters explain why
+X deliberately left many of those choices outside the display server.
+
+The workstation also exposed a persistent distinction between technical
+and everyday usability. An expert might value remote execution, programmable
+configuration, and unusual window-management behavior. A new user might
+find the same environment inconsistent and exhausting. Both reactions
+could be reasonable. A product designed for one audience can be successful
+without being a model for every audience.
+
+\section{RISC, price, and the changing competitive boundary}
+\index{RISC}
+
+Many workstation vendors adopted RISC processors to pursue high performance
+with architectures that suited contemporary compiler and chip-design
+strategies. SPARC, MIPS, PA-RISC, and POWER belong to this broad setting,
+although their designs and commercial histories differ. Unix's portability
+helped vendors move software toward new processors without rebuilding the
+entire programming environment from nothing.
+
+The surrounding market changed. Commodity personal-computer components
+became faster and cheaper. Windows NT offered a different technical and
+commercial platform. Linux and BSD systems brought Unix-like environments
+to inexpensive machines. Graphics acceleration moved into mass-market
+products, supported by a much larger gaming and consumer market.
+
+This did not make specialized workstations suddenly useless. Professional
+certification, applications, drivers, support contracts, and installed
+workflows remained valuable. It did change which parts of a machine could
+justify a premium. A vendor competing through a proprietary processor,
+operating system, graphics subsystem, and enclosure now faced competitors
+benefiting from huge production volumes elsewhere.
+
+The decline of the classic Unix workstation market should therefore not be
+confused with the disappearance of workstation practice. Engineers still
+use powerful local machines connected to shared services. Many now use
+Linux, macOS, or Windows with Unix tools. The packaging changed more
+completely than the pattern of work.
+
+\section{What survived the workstation era}
+
+The workstation helped normalize several expectations: a technical user
+should have a responsive graphical environment, network access should be
+ordinary, remote resources should be reachable from local applications,
+and a development toolchain should be part of the platform. These
+expectations outlived many of the vendors that established them.
+
+It also created a body of engineering whose later influence was not
+limited to Unix-branded products. Networking stacks, graphics APIs,
+compiler work, filesystem techniques, and window-system experience moved
+between institutions and systems. NeXT's workstation environment would
+have a particularly consequential afterlife in Apple's software platform.
+Mach and BSD would survive there in a form very different from a
+university terminal room.
+
+A familiar historical temptation is to describe the era as the last time
+computers were coherent and understandable. The contemporary complaints
+collected in \emph{The UNIX-HATERS Handbook} resist that nostalgia.
+Users already struggled with window systems, inconsistent interfaces,
+network assumptions, and administration \parencite{haters}.
+What looks coherent from a distance often felt like a collection of
+unfinished agreements to the person trying to make it work.
+
+Those agreements were about to become the subject of explicit commercial
+and standards conflict. If many vendors offered Unix, who could define
+what Unix meant? Which interfaces should applications rely on, and who
+controlled the name? The workstation's success made these questions more
+valuable, and therefore harder to settle.

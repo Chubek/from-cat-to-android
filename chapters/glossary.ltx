@@ -1,0 +1,198 @@
+\chapter{Vocabulary and Practical Investigations}
+\label{app:glossary}
+
+\section{A working vocabulary}
+
+\begin{description}
+\item[ABI] An application binary interface: calling conventions,
+representations, executable and linking expectations, and related
+agreements needed by compiled programs.
+\item[API] An application programming interface. Shared API behavior can
+support source portability without providing binary compatibility.
+\item[Buffer] Storage whose contents have a temporary role in a transfer
+or computation. Correctness includes ownership and reuse timing.
+\item[Capability] An authority-bearing reference or, in Linux's specific
+usage, one of the powers split from traditional superuser authority.
+The meanings should be distinguished in context.
+\item[Compositor] A component that arranges and presents surfaces,
+often combining them into an output image. Its other responsibilities
+depend on the display architecture.
+\item[Context switch] A transition between execution contexts that
+preserves enough state to resume suspended work.
+\item[Copy-on-write] Sharing storage until a modification requires a
+private copy, with protection and lifetime rules enforcing the illusion.
+\item[Descriptor] A process-local integer reference to an open kernel
+object or description. It is not a pathname.
+\item[Directory] A namespace object associating component names with
+filesystem objects or identifiers.
+\item[Distribution] An integrated, maintained assembly of a kernel,
+libraries, packages, configuration, and release policies.
+\item[Driver] Code implementing a hardware or device interface.
+Graphics stacks often contain both kernel and userspace driver components.
+\item[End-of-file] A result defined by the object being read.
+For a pipe, an empty buffer becomes EOF when no writers remain.
+\item[Exec] Replacement of a process's program image. A successful exec
+is not creation of a new process identity.
+\item[Fork] Creation of a child process with defined inheritance from
+its parent. Physical copying strategy is an implementation choice.
+\item[Free software] Software licensed to preserve specified user
+freedoms, including studying, modifying, and redistributing it.
+\item[Inode] A filesystem representation of an object's metadata and
+content mapping. A directory name and an inode are different entities.
+\item[Interrupt] An event that redirects execution under hardware rules,
+commonly to report a device or timer event.
+\item[Kernel] The privileged core managing protected access to resources
+and implementing essential system mechanisms.
+\item[Namespace] A context in which names are interpreted.
+Linux namespaces virtualize selected views of system resources.
+\item[Open file description] Kernel state associated with an opening,
+including properties such as offset, potentially shared by descriptors.
+\item[Page fault] An access that cannot complete under current mapping
+rules; it may invoke a useful allocation policy or report an invalid access.
+\item[Pipe] A byte-stream communication object with finite buffering
+and defined endpoint lifetimes.
+\item[POSIX] A family of specifications for portable operating-system
+interfaces and associated environments, with versioned scope.
+\item[Process] An execution environment containing identity, memory,
+resources, and execution state; distinct from the program it executes.
+\item[Pseudoterminal] A kernel-provided terminal pair enabling emulators
+and remote services to supply terminal semantics to applications.
+\item[Race] Behavior dependent on an ordering not adequately controlled
+by the program's protocol. Not every race is a language-level data race.
+\item[Signal] A notification mechanism with defined default actions,
+handling rules, masking, and pending-state behavior.
+\item[Socket] A communication endpoint whose operations depend on its
+address family, type, protocol, and state.
+\item[System call] A controlled request for kernel service through an
+architecture-specific entry mechanism.
+\item[Terminal emulator] A program interpreting terminal protocols and
+presenting their character-oriented interaction in another environment.
+\item[Transaction] A unit of work with explicitly defined atomicity
+and recovery properties. The word alone does not establish those properties.
+\item[Virtual memory] The mapping and management mechanisms separating
+program-visible addresses from physical storage and enforcing access rules.
+\item[Zombie] A terminated process's retained status record awaiting
+collection, rather than a process still executing instructions.
+\end{description}
+
+\section{Investigate a pipeline without large data}
+
+The following shell fragment creates an isolated temporary directory,
+counts a tiny ASCII dataset, and removes its own files on exit.
+It assumes a Unix-like environment with \texttt{mktemp -d} and a
+POSIX-style shell. The mktemp invocation is common but should be checked
+on unusual systems. No administrative privileges are needed.
+
+\begin{verbatim}
+#!/bin/sh
+set -eu
+scratch_dir=$(mktemp -d)
+trap 'rm -rf "$scratch_dir"' EXIT
+printf '%s\n' 'red blue red' 'blue green' \
+    > "$scratch_dir/words"
+LC_ALL=C tr -cs 'a-z' '\n' < "$scratch_dir/words" |
+    sort | uniq -c | sort -nr
+\end{verbatim}
+
+The counts should be two red, two blue, and one green.
+The order of the tied entries follows the final sort's rules; it is not
+an additional semantic property of word counting. The sample begins with
+a letter, avoiding an initial empty token. Its letter-only definition is
+intentional, not a recommendation for processing arbitrary natural language.
+
+Now run each stage separately and inspect the intermediate stream.
+Ask where records begin and end, which stage assumes equal values are
+adjacent, and why the final order differs from alphabetical order.
+This turns a pipeline from a memorized spell into an inspectable algorithm.
+
+The trap's variable is assigned before use and quoted during cleanup.
+The shell's error mode still does not establish complete pipeline-error
+handling for every shell version. For maintained automation, specify the
+shell and failure policy deliberately rather than generalizing from this
+small controlled input.
+
+\section{Observe an unlinked open file}
+
+This Python 3 example uses the Unix ability to keep an open file after its
+name is removed. It creates and removes only its own temporary file.
+It is intended for Unix-like systems; other operating systems can use
+different deletion semantics.
+
+\begin{verbatim}
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    path = os.path.join(directory, "example")
+    with open(path, "w+b") as stream:
+        stream.write(b"still available\n")
+        stream.flush()
+        os.unlink(path)
+        assert not os.path.exists(path)
+        stream.seek(0)
+        assert stream.read() == b"still available\n"
+\end{verbatim}
+
+The assertions distinguish namespace state from open-object state.
+The name is gone, but the descriptor still refers to the object.
+After the final close, the filesystem can reclaim storage under its
+normal lifetime rules. This is not a crash-durability experiment and
+should not be described as one.
+
+\section{Compare one shared offset with two independent openings}
+
+The next example demonstrates an open file description directly.
+Python's unbuffered descriptor operations avoid adding a language-level
+read buffer that could obscure the offset being examined.
+
+\begin{verbatim}
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    path = os.path.join(directory, "letters")
+    with open(path, "wb") as stream:
+        stream.write(b"abcd")
+    first = os.open(path, os.O_RDONLY)
+    duplicate = os.dup(first)
+    independent = os.open(path, os.O_RDONLY)
+    try:
+        assert os.read(first, 1) == b"a"
+        assert os.read(duplicate, 1) == b"b"
+        assert os.read(independent, 1) == b"a"
+    finally:
+        for descriptor in (first, duplicate, independent):
+            os.close(descriptor)
+\end{verbatim}
+
+The duplicate shares an offset with the first descriptor.
+The independent opening starts from its own offset.
+The same underlying bytes participate in both relationships.
+Fork inheritance can produce a related sharing effect across processes,
+but duplication lets this investigation isolate the essential distinction
+without adding scheduling.
+
+\section{Read a teaching kernel by invariant}
+
+With an authorized copy of Sixth Edition source or an xv6 source tree
+matching the supplied book, select one operation rather than reading
+random functions. For a pipe read, identify the condition that means data
+is available, the state that records writers, and the lock or interrupt
+protocol protecting both.
+
+Write down what must remain true while the reader sleeps.
+Then trace what the writer changes before it wakes the reader.
+Ask whether an intervening notification can be lost and which exact
+operation closes that window. Finally inspect how the last writer's close
+changes the condition for EOF.
+
+For a filesystem operation, make the same exercise about persistence.
+List every block changed by a file creation, identify the commit point
+in the supplied xv6 log, and consider a crash before and after it.
+The exercise should end with a statement of assumptions, especially what
+a disk write is assumed to preserve.
+
+These investigations are deliberately small.
+Their purpose is to train distinctions that survive changes of hardware,
+language, and user interface. A reader who can explain the observations
+has learned more than the syntax of a particular command.

@@ -1,0 +1,258 @@
+\chapter{Android and the Many Meanings of Unix}
+\label{ch:android}
+\index{Android}\index{Bionic}\index{Binder}\index{Darwin}\index{macOS}
+
+\section{The phone does not need to look like its kernel}
+
+Android's first commercial phones appeared in 2008.
+A user encountered applications, touch interaction, a lifecycle managed
+by the platform, and services designed around a mobile device.
+Underneath, the Linux kernel supplied process isolation, memory
+management, scheduling, networking, drivers, and other essential
+mechanisms. The application experience did not have to resemble a
+Linux workstation to benefit from that machinery.
+
+This distinction is the reason the title ends with Android.
+The continuity is substantial, but it is not the survival of an unchanged
+user interface. A phone owner may never see a shell or a pathname.
+The abstractions that made Unix useful to programmers can operate behind
+interfaces designed for entirely different habits and constraints.
+
+Mobile devices also change the operating environment.
+Energy, thermal limits, radios, cameras, sensors, and intermittent
+connectivity are central concerns. A background computation can reduce
+battery life or interfere with an immediate interaction.
+An application may need to stop and restart under platform control rather
+than assume it owns an uninterrupted session.
+
+The kernel is therefore a foundation, not a complete explanation of the
+product. Understanding Android requires following the layers above it
+and the institutions that decide how those layers are assembled.
+
+\section{Bionic marks a different userspace}
+
+Conventional GNU/Linux distributions commonly use the GNU C library and
+many GNU utilities. Android uses Bionic as its C library, math library,
+and dynamic-linker implementation. The official maintainer overview
+identifies these components explicitly and describes the loader's role
+in starting ELF programs \parencite{bionic}.
+
+The choice affects binary compatibility. A native executable built for
+one Linux userspace may expect a different dynamic loader, library ABI,
+filesystem layout, or set of interfaces. Sharing a kernel family does
+not make that executable automatically usable on Android.
+The kernel system-call boundary is only one part of the environment an
+application expects.
+
+Bionic also shows why ``Linux'' and ``GNU/Linux'' cannot always be treated
+as interchangeable labels. GNU's contributions are foundational to many
+Linux systems, but Android's system composition differs.
+The most informative description names the actual kernel, libraries,
+runtime, and application model rather than forcing every product into
+one familiar desktop category.
+
+A shell and command tools can exist on Android devices, especially for
+development and debugging, without defining the ordinary application
+experience. The presence of a command interpreter is not evidence that
+a phone offers the same permissions, packages, or workflow as a desktop
+distribution. Context determines what the familiar tools can do.
+
+\section{The runtime and framework define application life}
+\index{ART}\index{Dalvik}\index{application lifecycle}
+
+Early Android used the Dalvik runtime; later releases adopted ART.
+The platform's Java and Kotlin application ecosystem operates through
+framework services and a managed runtime, with native code available
+through the NDK and other system components. This is a different contract
+from launching an arbitrary desktop ELF executable in a login session.
+
+Applications are made of components whose lifetimes are managed by the
+system. A visible activity, background work, and a service have different
+expectations and restrictions. The platform can reclaim a process,
+change an application's execution opportunities, or recreate user
+interface state. Exact rules evolve with Android releases and target
+SDK levels.
+
+This model reflects resource and user-experience goals.
+A phone should remain responsive and conserve energy even when many
+applications have been installed. It cannot assume every application
+will voluntarily stop work at the ideal moment.
+Policy is enforced through framework rules as well as kernel mechanisms.
+
+The lifecycle creates application-design obligations.
+Important state cannot live only in a transient screen object.
+Work must distinguish what can be repeated, what must survive restart,
+and what should be cancelled when the user leaves.
+These are variations of the same lifetime and failure questions already
+seen in servers and kernels.
+
+\section{Binder supplies a service vocabulary}
+
+Android uses Binder for important communication among processes and
+system services. Its object-oriented transaction model provides a way
+to invoke operations across process boundaries, transfer references and
+certain resources, and associate requests with caller identity.
+Generated interfaces can make an interaction resemble a local method
+call, but the boundary remains real.
+
+A remote operation can block, fail because a process dies, or trigger
+reentrant work. Arguments need serialization and validation.
+The service must check whether the caller is authorized to perform the
+requested action. A convenient stub does not turn a remote transaction
+into an ordinary in-process function call.
+
+Binder's prominence is instructive because it departs from the simplest
+``everything is a byte stream'' caricature of Unix.
+Android keeps Unix-like processes and descriptors while using a richer
+IPC mechanism suited to a service framework. The system did not have to
+choose between retaining every historical interface and abandoning the
+kernel tradition entirely.
+
+The broader platform also includes facilities such as Zygote for process
+startup and shared runtime initialization. These mechanisms exploit
+process and memory behavior for a workload very different from the
+original shell launching a small command. A stable set of primitive
+abstractions can support specialized higher-level launch policies.
+
+\section{The user account becomes an application boundary}
+\index{Android!sandbox}\index{permissions!Android}\index{SELinux}
+
+Traditional multiuser Unix often assumed that programs belonging to one
+user were mutually trusted. Android ordinarily assigns applications
+separate Linux identities and storage boundaries, with exceptions and
+shared relationships governed by platform rules. The identity mechanism
+is reused to separate applications rather than only human login accounts.
+
+Permissions and framework checks then mediate access to sensitive
+capabilities. Modern Android also uses SELinux policy, seccomp and other
+hardening, and restrictions on background execution and storage.
+The details vary by version and device, but the architectural trend is
+clear: a phone's installed applications are not assumed to deserve the
+same broad ambient authority.
+
+A permission prompt is not the whole security model.
+An application can delegate access, receive a resource through another
+component, or interact with a privileged service that validates a request.
+Correctness depends on the entire path of authority.
+A service that forgets to validate its caller can bypass the intended
+boundary even when the application sandbox itself is functioning.
+
+Updates are part of the model too. Kernel, vendor drivers, firmware,
+framework components, and applications may have different maintenance
+paths. A device's security depends on which components can be updated,
+for how long, and by whom. Public source for one layer does not guarantee
+that every deployed device receives timely fixes.
+
+\section{Graphics returns to composition}
+\index{SurfaceFlinger}
+
+Android applications render into surfaces that are coordinated by the
+system's graphics stack. SurfaceFlinger and hardware-composer integration
+help assemble what appears on the display. GPU APIs and device drivers
+perform work beneath application toolkits.
+This is a compositor-centered environment, but it is not simply a Wayland
+desktop placed on a phone.
+
+The similarity lies in the engineering problems: buffer ownership,
+synchronization, composition, scaling, presentation deadlines, and
+hardware capabilities. The protocols and framework arrangements differ.
+A family resemblance should not be mistaken for interchangeability.
+
+Touch input also changes policy. Focus, gesture interpretation,
+orientation, software keyboards, and application transitions require
+coordination across layers. A desktop window-manager convention cannot
+be imported unchanged and expected to feel natural.
+The user interface embodies the physical form of the device.
+
+Energy makes the frame pipeline a resource policy as well as a visual
+one. Rendering unnecessary frames consumes power and generates heat.
+The platform must coordinate application demand with refresh behavior,
+hardware acceleration, and background limits. Smooth interaction is an
+agreement about timing across a whole system.
+
+\section{An open project and a commercial product are different objects}
+\index{AOSP}
+
+The Android Open Source Project supplies a large body of platform source.
+Commercial devices can combine it with proprietary applications,
+services, drivers, firmware, branding, and distribution arrangements.
+AOSP and a particular retail phone are therefore not identical artifacts.
+
+The Linux kernel's GPL obligations and the licenses of userspace components
+apply to their respective covered material. They do not make every
+application and remote service on a phone open source automatically.
+A complete account must name which component and which permission is
+being discussed.
+
+Control over modification is also practical.
+A device may have published source yet restrict bootloader unlocking,
+require signed firmware, or depend on unavailable hardware support.
+A technically skilled owner may be able to install another system on
+some models and not others. The general availability of Android source
+does not settle every device's future.
+
+This tension reaches back to the beginning of the book.
+Source access, permission to redistribute, ability to replace a component,
+and support for a working product have always been separate questions.
+Modern devices combine them in new ways rather than making the distinction
+obsolete.
+
+\section{BSD and Darwin continue alongside Linux}
+\index{FreeBSD}\index{NetBSD}\index{OpenBSD}\index{Mach}\index{XNU}
+
+The contemporary Unix landscape remains plural.
+FreeBSD integrates a base system with a strong operating-system identity;
+NetBSD has emphasized portability; OpenBSD is associated with security,
+code review, and related engineering priorities. These descriptions are
+emphases, not exhaustive feature lists or guarantees that every component
+of a project has one property.
+
+Apple's Darwin foundation follows another path.
+XNU combines Mach-derived facilities with BSD components and other
+subsystems, including its driver framework. The shipping macOS experience
+adds substantial frameworks, graphics, applications, and product policy
+above that foundation. Calling macOS ``just BSD'' or ``just Mach'' misses
+the integrated architecture.
+
+The supplied 1986 Mach paper describes an early stage with tasks,
+threads, ports, and virtual-memory innovations alongside Unix compatibility.
+It should not be used as a literal blueprint for every later Mach-derived
+system. In particular, the fact that Mach research explored moving
+services into separate servers does not imply that XNU is a pure
+user-space-server microkernel \parencite{mach}.
+
+These systems can share tools and standards while preserving distinct
+implementation and licensing histories. A shell script may work across
+several of them; a binary or kernel module may not.
+The book's recurring distinction among API, ABI, ancestry, and certification
+is most useful here, where familiar names invite overgeneralization.
+
+\section{From a typesetter to an unseen operating system}
+
+The C/A/T made Unix useful by turning editable source into a printed
+artifact people wanted. Android makes a Unix-like kernel useful behind
+an interface people do not experience as Unix at all.
+The endpoints differ in hardware, audience, scale, and policy, yet both
+show the importance of an environment that can be adapted around a
+concrete task.
+
+What persisted was not a fixed list of commands or a promise that every
+service would become a file. It was a collection of productive boundaries:
+processes with identities, named persistent objects, explicit communication,
+replaceable tools, and implementations that could travel across machines.
+Some boundaries had to be strengthened; others were replaced when their
+assumptions no longer fit.
+
+The history also shows that interfaces do not maintain themselves.
+People write drivers, review patches, document behavior, resolve licensing
+questions, test combinations, and keep old applications alive through
+transitions. Their work is easiest to overlook when the result feels
+ordinary. A phone that wakes promptly or a game that launches correctly
+can conceal decades of such labor.
+
+Unix's future cannot be read from its first edition.
+New languages, hardware, security requirements, and forms of interaction
+will continue to change what counts as a useful system.
+Its history offers something more durable than a prediction: a way to
+examine which agreements make a system understandable, which make it
+adaptable, and which have become obstacles to the people it serves.

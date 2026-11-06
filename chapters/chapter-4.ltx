@@ -1,0 +1,159 @@
+\chapter{Berkeley Makes a Larger Unix}
+\label{ch:bsd}
+\index{BSD}\index{Berkeley Software Distribution}\index{Joy, Bill}\index{VAX}
+
+\section{A distribution before a separate operating system}
+
+The Berkeley Software Distribution began as additions to an existing Unix
+environment. Its name describes an activity: collecting useful software
+and sending it to other sites. Early distributions were not unrestricted,
+self-contained replacements for AT\&T's system. Recipients generally
+needed an appropriate Unix license. A later BSD identity grew out of this
+practice rather than appearing fully formed with the first tape.
+
+Universities supplied a distinctive development setting. They had students
+who could spend intensive periods improving tools, researchers who needed
+new facilities, and links to other institutions with similar problems.
+They also had turnover. A successful improvement needed documentation and
+interfaces that outlived its immediate author. Sharing a distribution made
+a local change available for review and reuse elsewhere.
+
+Bill Joy's work on editors and the C shell is part of this story, but BSD
+was never the work of one programmer alone. Bob Fabry, Chuck Haley, Özalp
+Babaoglu, Marshall Kirk McKusick, Sam Leffler, Mike Karels, Keith Bostic,
+and many others contributed at different periods. The Computer Systems
+Research Group became a center where contributions could be integrated
+into a coherent system. Integration was a form of engineering, not merely
+administration \parencite[ch. 8]{kernighan-history}.
+
+\section{The VAX changes the scale of the problem}
+
+The PDP-11 was an excellent home for a compact system, but its address-space
+limits constrained large programs. DEC's VAX offered a 32-bit architecture
+and hardware support for virtual memory. A port could make Unix run on the
+new machine without immediately exploiting all those capabilities.
+That was the situation with Unix/32V, derived from Seventh Edition through
+work by John Reiser and Tom London at Bell Labs.
+
+Berkeley's virtual-memory work changed the practical possibilities.
+A process could address more memory than it had resident at a particular
+moment. The kernel and hardware cooperated to bring pages into physical
+memory as required. Larger symbolic programs, scientific applications,
+and development tools became more feasible. The programming model still
+looked recognizably Unix even though memory management had become much
+more elaborate.
+
+This is a recurring pattern in the history: retain a useful external
+abstraction while rebuilding its implementation for a new scale.
+A process still executes a program in an address space. A file still
+presents bytes. Those descriptions conceal increasingly sophisticated
+policies about page replacement, caching, allocation, and scheduling.
+Compatibility at the interface buys room for innovation underneath.
+
+Virtual memory also changes the balance of costs. Copying an entire process
+image at every creation may become expensive. Demand paging and
+copy-on-write can reduce that expense, but they introduce page faults,
+shared-state accounting, and new failure paths. A larger address space is
+not free simply because the processor can express its addresses. It needs
+an operating system that can manage the resulting work.
+
+\section{The disk must keep up}
+\index{Fast File System}\index{cylinder groups}
+
+A faster processor and a larger memory expose a slow file system more
+clearly. Workloads such as image processing and VLSI design moved large
+amounts of data with relatively little computation per byte. A file system
+using small blocks scattered across a disk could waste most of the device's
+time seeking rather than transferring useful data.
+
+The Fast File System described by McKusick, Joy, Leffler, and Fabry in 1984
+addressed this mismatch. It used larger blocks for transfer efficiency,
+fragments to avoid excessive waste for small files, and allocation policies
+that improved locality. Cylinder groups placed related resources in
+regions of the disk rather than leaving every allocation to an
+undifferentiated free list \parencite{ffs}.
+
+The paper reports performance in its own experimental and hardware setting.
+Its headline improvements are not a timeless multiplier that can be
+applied to every disk or application. The enduring result is the method:
+measure the actual bottleneck, exploit the physical device's behavior,
+and preserve a useful programming interface wherever possible.
+
+FFS also included user-visible improvements such as longer filenames and
+other facilities associated with the 4.2BSD environment. Not all of BSD's
+contributions were invisible optimizations. The challenge was to introduce
+new capabilities without forcing every existing program to understand
+new disk geometry. The boundary between the file API and the allocation
+algorithm made that possible.
+
+\section{Networking becomes an ordinary programming task}
+\index{TCP/IP}\index{sockets}\index{DARPA}
+
+Networking research and government funding were important to Berkeley's
+work. The 4.2BSD release in 1983 helped establish TCP/IP and the sockets
+interface as widely available parts of a Unix programming environment.
+The Internet was not invented by BSD, and TCP/IP did not originate there.
+BSD's importance lay in integration, distribution, and the accessibility
+of a working implementation to a community ready to use it.
+
+A socket is represented by a descriptor, connecting network communication
+to an existing style of I/O. Yet network setup needs operations with no
+simple counterpart in opening a local file: choosing an address family,
+binding a local endpoint, listening, connecting, and accepting a peer.
+Sockets extended the file-descriptor model without pretending a network
+was just an ordinary disk file.
+
+That compromise was productive. Programs could use familiar reads and
+writes once a connection existed, and event mechanisms could monitor
+sockets alongside other descriptors. Specialized operations remained
+available for specialized behavior. The resulting API was not perfectly
+uniform, but it was usable and expressive enough to spread far beyond BSD
+\parencite[ch. 2 and socket overview]{unp}.
+
+Distribution mattered as much as invention. A networking stack available
+with a widely studied operating system could be ported, debugged, taught,
+and adapted. People learned sockets as an ordinary systems skill rather
+than as a feature of one inaccessible research installation. Code,
+manuals, and practice reinforced each other.
+
+\section{A networked system has different weaknesses}
+
+A time-sharing host already has concurrency and protection problems.
+Connecting hosts adds partial failure. A remote machine may disappear
+while the local one continues running. Delays may reflect congestion,
+retransmission, a crashed service, or a slow application. A program can
+remain correct with respect to its local API while making a bad assumption
+about the state of a peer.
+
+Network services also widen the audience for mistakes. A parser that once
+handled input from a small group of local users may now receive arbitrary
+bytes from strangers. Authentication, privilege separation, and resource
+limits become critical. Convenience mechanisms designed for a trusted
+laboratory network can become hazards on a hostile network.
+
+The 1988 Internet worm demonstrated how connected environments could
+magnify vulnerabilities and misplaced trust. It is misleading to infer
+that networking destroyed a previously secure Unix. Multiuser protection
+had limits long before the worm. Networking made those limits visible at
+a larger scale and increased the cost of ignoring them.
+
+\section{BSD as an integration tradition}
+
+Berkeley's work is sometimes reduced to a branch on a family tree. That
+image captures inheritance but underplays exchange. Code, techniques, and
+interfaces moved between research Unix, commercial systems, Berkeley
+releases, and later independent implementations. A clean tree can make a
+history of borrowing look like a history of isolation.
+
+The distributions also changed the meaning of a local improvement.
+An editor fix could influence thousands of users; an API choice could
+shape applications for decades. This increased the value of consistency,
+release engineering, and compatibility. A research group that shipped a
+system was taking responsibility for other people's work.
+
+BSD's later legal separation from AT\&T code belongs in
+\cref{ch:wars}. Technically, its earlier transformation was already
+profound. Unix had become a comfortable environment for larger programs,
+faster disks, and networked applications. Those capabilities made it an
+attractive base for a new kind of computer: the personal, graphical,
+network-connected workstation.

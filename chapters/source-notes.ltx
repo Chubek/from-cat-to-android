@@ -1,0 +1,142 @@
+\chapter{Sources, Editions, and Historical Method}
+\label{app:sources}
+
+\section{What the source collection can establish}
+
+The supplied collection is rich but uneven. It includes historical papers,
+textbooks, manuals, memoirs, OCR transcriptions, translated editions,
+duplicate files, empty files, and short fragments. Its filenames are useful
+locators but not reliable bibliographic descriptions. This manuscript uses
+contents and internal title pages to identify works.
+
+The bibliography's local-file notes provide an audit trail.
+A companion \texttt{SOURCE-GUIDE.md} in the repository maps citation keys
+to exact files and records limitations. The guide also distinguishes
+supplementary official project documentation from the local collection.
+The sources themselves have been left unchanged.
+
+Different kinds of evidence answer different questions.
+A contemporaneous design paper can establish what its authors described
+at that date. A memoir can explain motivations and social context,
+while being subject to retrospective selection. A textbook can provide
+a coherent technical model that is intentionally simpler than every
+shipping implementation. A source tree can establish what code does only
+when interpreted with its build, hardware, and version context.
+
+\section{The historical backbone}
+
+Ritchie's ``Evolution'' is the main account of the early development
+sequence. It explicitly dates Unix's birth to 1969, distinguishes earlier
+experiments from the published 1974 description, and gives concrete context
+for patent work, pipes, and C. The version in the collection identifies
+an original 1979 presentation and a 1984 journal reprint. The bibliography
+cites the latter while preserving that distinction \parencite{evolution}.
+
+Ritchie and Thompson's time-sharing-system paper provides the public
+technical snapshot. It is used for its file and process model and for
+what the authors said about the system's applications at that moment.
+Thompson's 1978 implementation paper provides a later architectural
+account, including a filesystem layout that should not be projected
+backward onto every earlier edition
+\parencite{ritchie-thompson,implementation}.
+
+Kernighan's memoir supplies context about Bell Labs, the C/A/T,
+tools, commercialization, and descendants. The supplied copy's copyright
+page says 2020, so the bibliography uses that year rather than silently
+substituting another edition's date. Salus supplies a complementary
+history of users, licensing, GNU, BSD, and Linux. The supplied Salus
+compilation has no securely established publication date, so none has
+been invented \parencite{kernighan-history,salus}.
+
+The short file named as a quarter-century Unix history is not treated as
+a complete copy of Salus's separate book. Similarly, the file named
+\path{ken-thompson-history-of-unix.txt} contains Markus Kuhn's 2003
+Unix Tools lectures. It is not cited as a first-person Thompson history.
+Correct attribution takes precedence over a convenient filename.
+
+\section{The implementation backbone}
+
+Lions's supplied commentary is the 1977 teaching text about Sixth Edition.
+The explanations in this book use its chapter and section structure,
+especially processes, switching, critical sections, file tables, and
+inodes. They do not reproduce its source listing or claim that its
+techniques constitute modern production guidance \parencite{lions}.
+
+The supplied xv6 text is the RISC-V edition dated 27 October 2019.
+Its page tables, trap entry, locking, scheduling, and log are treated as
+a coherent comparison implementation. Section numbers refer to that
+edition. Online xv6 revisions can differ, so readers using another version
+should locate the corresponding topic rather than assume a line number
+will match \parencite{xv6}.
+
+Bach supplies a broader Unix-kernel account. Stevens and Rago's third
+edition supplies the application-facing distinction between standardized
+interfaces and implementation behavior. Stevens, Fenner, and Rudoff
+supply the sockets and stream-programming background. These works cover
+different layers and periods; their examples are not interchangeable
+snapshots of a single operating system \parencite{bach,apue,unp}.
+
+The FFS paper is used both historically and technically.
+Its measured results belong to its tested machines and workloads.
+Its general lesson about locality and abstraction is a synthesis here,
+not a claim that the same performance ratio applies to modern storage
+\parencite{ffs}.
+
+\section{Tools, criticism, and the screen}
+
+Roddy's guide and Cherry and Lesk's macro documentation explain the roff
+family and the boundary between primitive requests and document structure.
+The supplied Cherry--Lesk text identifies the Research Tenth Edition
+context but does not establish a precise date; the bibliography retains
+that uncertainty \parencite{roddy,cherry-lesk}.
+
+The Kernighan--Pike file used here is a Russian translation with an original
+English publication date of 1984 and a translation date of 2003.
+It supports the account of an integrated programming environment.
+The shell examples in this manuscript are original and are not presented
+as quotations or translations from that file \parencite{programming-env}.
+
+Raymond's supplied printing bears a 2004 copyright although the work was
+first published in 2003. Its design rules are discussed as advice to be
+tested, not as a binding definition of Unix. The
+\emph{UNIX-HATERS Handbook} supplies counterevidence about usability and
+integration. The 1990 random-input study supplies measured criticism
+with an explicitly limited sample. None of those sources licenses an
+unsupported claim about the reliability of every current system
+\parencite{raymond,haters,fuzz}.
+
+The Mach paper describes a 1986 implementation and research direction.
+Later microkernel developments and Apple's XNU are not collapsed into
+that early design. The distinction is essential because a project's
+name can survive substantial architectural change \parencite{mach}.
+
+\section{Modern material and the limits of this account}
+
+The supplied historical collection does not fully cover contemporary
+Wayland, Android, containers, or Proton. The modern chapters therefore
+add established systems knowledge and explicitly identified official
+project documentation. The Wayland project overview establishes the
+protocol's compositor, input, and buffer model. Bionic's maintainer guide
+establishes its library and loader roles. Proton's documentation establishes
+its Wine-based purpose and the existence of version-specific configuration
+and component integration \parencite{wayland,bionic,proton}.
+
+The cgroup v2 documentation supplies the resource-control model.
+These online references were consulted on 6 November 2026.
+Where available, the bibliography records the fetched document's Git blob
+identifier. A blob identifies file content; it is not a claim to have
+pinned an entire project release. URLs may later show newer content
+\parencite{cgroups}.
+
+Detailed explanations of graphics synchronization, Android lifecycle,
+and distributed failure are the author's technical synthesis.
+They should not be mistaken for measurements conducted for this book
+or quotations from the historical collection. The account deliberately
+avoids current market-share figures, a list of supported phone models,
+and universal game-compatibility promises.
+
+Historical precision includes knowing when evidence is incomplete.
+Rather than smoothing every ambiguity into a confident date or claiming
+all branches developed in isolation, this book preserves distinctions
+that affect the explanation. The aim is a history readers can question,
+trace, and extend, not a legend that depends on never opening its sources.

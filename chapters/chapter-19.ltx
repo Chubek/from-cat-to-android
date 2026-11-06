@@ -1,0 +1,183 @@
+\chapter{Games on a System Built for Other Work}
+\label{ch:gaming}
+\index{gaming on Linux}\index{Wine}\index{Proton}\index{Steam Deck}\index{Vulkan}
+
+\section{The desktop needs applications people want}
+
+An operating system can have excellent process isolation and networking
+while remaining unattractive to someone whose important application does
+not run. Games make this truth unusually visible. Their requirements span
+graphics, sound, input, timing, content delivery, copy protection, and
+social services. A missing piece can prevent play even when the kernel
+and compiler work perfectly.
+
+Unix had games from its earliest years, including the activities around
+the PDP-7. Later Unix and Linux systems supported many native games and
+ports. That continuity should not be confused with broad compatibility
+with the commercial Windows game market. The latter required a much
+larger body of APIs, middleware, drivers, and tested behavior.
+
+Linux gaming therefore provides a useful test of the book's central
+argument. A shared interface can make independently developed software
+usable in a new environment, but the interface includes far more than
+function names. Timing, undocumented assumptions, packaging, and failure
+behavior can all become part of what compatibility must reproduce.
+
+\section{Native ports still need an ecosystem}
+
+A native port adapts a game's code and dependencies to the target platform.
+Libraries such as SDL can abstract input, windows, and other services.
+Cross-platform engines can reduce the work further. Yet an engine's
+support does not guarantee that every plugin, codec, launcher, or online
+service used by a particular game also supports the platform.
+
+Developers must test different graphics drivers, audio configurations,
+window systems, controllers, and library environments.
+Distributing a binary raises questions about compatible runtime libraries
+and supported distributions. A game that works on the developer's machine
+may fail on a user's installation with a different loader or dependency.
+
+Runtime containers and bundled libraries can reduce variation, but they
+must cooperate with host components such as graphics drivers.
+A program cannot always bundle its way out of the hardware boundary.
+The installation environment and the machine's active driver stack still
+form part of the effective platform.
+
+The economics matter as well. A publisher compares expected audience,
+support burden, testing cost, and opportunity cost. Technical feasibility
+alone does not guarantee a port. A platform can consequently face a cycle:
+fewer games reduce adoption, while a smaller audience reduces incentives
+to support it.
+
+\section{Wine implements a different application contract}
+
+Wine provides a compatibility implementation for Windows applications on
+Unix-like systems. It does not normally boot a full Windows guest operating
+system for each application. It implements and translates the interfaces
+applications expect, coordinating with the host's processes, files,
+windowing, and other facilities.
+
+That description needs a qualification. Running code for one processor
+architecture on a different architecture can require additional translation
+or emulation mechanisms. The claim that Wine is not a conventional
+whole-machine emulator does not mean instruction-set differences vanish.
+The application API and CPU execution model are separate layers.
+
+Compatibility work includes observable behavior that a clean specification
+may not capture. An application can depend on an undocumented return value,
+a particular synchronization pattern, or a bug in a widely deployed
+implementation. Reproducing that behavior can be necessary even when a
+more elegant design would avoid it.
+
+This makes compatibility engineering both empirical and historical.
+Developers compare behavior, isolate regressions, and add targeted fixes.
+The result can look inelegant locally while serving a coherent goal:
+preserve an existing application's assumptions without requiring its
+author to rewrite it.
+
+\section{Proton assembles a gaming path}
+
+Valve introduced Proton as part of its Steam Play work in 2018.
+The official project overview describes it as a tool for running
+Windows-exclusive games on Linux using Wine. Proton integrates and
+coordinates additional components and fixes for the gaming environment;
+it is not simply a new name for the Linux kernel or for all of Wine
+\parencite{proton}.
+
+DXVK translates major Direct3D 9, 10, and 11 interfaces toward Vulkan;
+vkd3d-proton addresses Direct3D 12. These components are important because
+modern games often express graphics work through Direct3D rather than a
+native Linux API. Their translation path relies on capable Vulkan drivers
+and appropriate hardware features.
+
+Vulkan supplies a lower-level explicit graphics and compute API.
+It does not automatically make translation perfect or costless.
+Resource binding, synchronization, shader compilation, and feature support
+must be mapped carefully. A game can be CPU-limited, GPU-limited,
+or affected by synchronization overhead in ways that make simple
+performance comparisons misleading.
+
+Proton versions can change a game's behavior, and individual titles can
+need specific fixes. The official README exposes configuration and logging
+facilities, which themselves evolve. This book therefore explains the
+architecture rather than promising that a particular title works under
+every release. Compatibility is a tested relationship among a game,
+a runtime, drivers, and hardware.
+
+\section{A frame is a deadline, not just an image}
+\index{frame pacing}\index{shader compilation}
+
+A game must present useful frames at an acceptable cadence.
+Average frame rate alone can hide stutter. A brief stall during shader
+compilation or asset loading may be more noticeable than a modest
+reduction in steady throughput. Frame pacing asks how evenly the work
+arrives at the display.
+
+The pipeline crosses many boundaries: input sampling, simulation,
+command generation, driver processing, GPU execution, compositor policy,
+and display scanout. Queueing can improve throughput while increasing
+latency. Reducing a queue can improve responsiveness while making missed
+deadlines more visible. The best configuration depends on hardware,
+refresh behavior, and the application's goals.
+
+Shader caches and precompilation can reduce repeated work, but cached
+results depend on relevant versions and device properties.
+A driver update can invalidate assumptions. A downloaded cache is not
+a universal substitute for every shader a game might generate dynamically.
+The practical success of gaming requires maintenance of these details,
+not merely a functioning translation layer.
+
+Audio and input have similar timing concerns. A controller must be
+identified and mapped sensibly; focus changes and device reconnection
+must behave predictably; suspend and resume must preserve a coherent
+session. These are integration qualities that ordinary kernel benchmarks
+rarely measure.
+
+\section{Anti-cheat and protected services define another boundary}
+\index{anti-cheat}
+
+Some multiplayer games depend on anti-cheat systems and other protected
+services. A compatibility layer may implement the game's ordinary APIs
+while failing the service's requirements or authorization policy.
+Some systems offer Linux or Proton support under particular conditions;
+others depend on Windows-specific kernel mechanisms or publisher choices.
+
+The obstacle is therefore not always a missing graphics function.
+A server can refuse a client environment even when the game would otherwise
+run. A publisher may need to enable a supported mode, validate it,
+and accept its security tradeoffs. A universal statement that anti-cheat
+``works'' or ``does not work'' on Linux conceals these distinctions.
+
+This is another lesson about interfaces and institutions.
+Compatibility includes permission to participate in a service.
+Implementing a local behavior cannot compel a remote operator to accept
+it. The effective platform boundary is partly technical and partly
+organizational.
+
+\section{The Steam Deck turns integration into a product}
+
+The Steam Deck, released in 2022, made Linux gaming visible as a coherent
+consumer device rather than solely a configurable desktop arrangement.
+Its SteamOS environment combines a Linux base, graphics drivers,
+compatibility tools, a controller-oriented interface, power management,
+and a selected hardware platform.
+
+The fixed hardware target reduces some variation without removing the
+need for testing. A useful handheld experience requires readable text,
+appropriate control prompts, workable launchers, acceptable performance,
+and sensible suspend behavior. A game can render correctly yet remain
+awkward on a small screen or require an unsupported input path.
+
+The product illustrates how much value comes from curation and defaults.
+The underlying components retain their separate identities, but users
+benefit from an organization testing the combination.
+This is related to distribution engineering and to the classic workstation
+vendor's integration role, even though the market and licensing structure
+are different.
+
+Linux gaming's recent history thus returns to an old Unix problem:
+how can independently developed parts form an environment people can
+actually use? The answer includes stable interfaces, translation,
+measurement, and extensive integration work. The same answer helps
+explain how a Unix-like kernel reached an even larger audience through
+phones.

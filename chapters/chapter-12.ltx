@@ -1,0 +1,167 @@
+\chapter{Communication and the Shape of Failure}
+\label{ch:ipc}
+\index{interprocess communication}\index{signals}\index{sockets}\index{TCP}
+
+\section{A pipe is a queue with lifetimes}
+
+The shell pipeline works because the kernel provides a communication
+object whose endpoints can be inherited and rebound. One endpoint is
+used for reading, the other for writing. The bytes travel through a finite
+buffer. The object also records whether readers and writers remain,
+which is essential to deciding whether an empty buffer means ``wait'' or
+``end of input.''
+
+For a two-stage pipeline, the shell creates the pipe and children, gives
+the producer the write end as standard output, and gives the consumer the
+read end as standard input. Each participant closes the ends it does not
+need. The parent also closes its copies after arranging the children.
+Those closes are part of the communication protocol, not optional tidying.
+
+If the parent accidentally retains a write reference, the consumer may
+never see end-of-file. If all readers disappear, a writer encounters the
+broken-pipe behavior defined by the interface, commonly involving
+\texttt{SIGPIPE} and an error. This lets a downstream command stop early
+without requiring the producer to know the downstream command's purpose
+\parencite[ch. 15]{apue}.
+
+A pipe is a byte stream rather than a sequence of arbitrary application
+messages. The interface provides particular atomicity guarantees for
+writes up to \texttt{PIPE\_BUF}; it does not promise that every read returns
+one original write. Applications needing records must supply framing,
+respect the specified limits, and handle short transfers.
+
+\section{Signals announce events, not complete work items}
+
+Signals provide asynchronous notification of selected events.
+A user can interrupt foreground work; a timer can expire; a child can
+change state. A process may accept a default action, ignore an allowed
+signal, or install a handler. Some signals cannot be caught or ignored.
+
+The difficulty is that a handler can run while ordinary code is in a
+sensitive state. A library may hold internal locks or be halfway through
+updating a data structure. Calling a convenient function from the handler
+can reenter code that is not safe to reenter. The set of
+async-signal-safe operations is therefore deliberately constrained.
+
+A common strategy is to make the handler do minimal work and arrange for
+ordinary control flow to respond. Even setting a flag requires an
+appropriate type and protocol. More elaborate designs can route
+notifications into an event loop through platform-supported mechanisms.
+The aim is to separate notification from work whose context requirements
+are stronger.
+
+Ordinary non-real-time signals can coalesce: multiple occurrences do not
+necessarily produce an equal number of pending notifications.
+An application must not treat them as an unbounded reliable message queue.
+This resembles the sleep/wakeup lesson. An event mechanism tells a process
+to reexamine state; it does not always preserve every historical occurrence.
+
+\section{Shared memory moves the protocol into the application}
+\index{shared memory}
+
+Two processes can communicate by mapping shared storage into their address
+spaces. This can avoid repeated copying through a stream interface and
+support efficient data structures. It also removes some of the natural
+boundaries that make a pipe easy to understand.
+
+The participants must agree on layout, synchronization, ownership,
+and recovery if one dies while modifying shared state. A pointer valid
+in one address space may not be valid in another unless mappings are
+arranged accordingly. Offsets or handles can be safer representations.
+A language-level object containing hidden pointers may be unsuitable for
+unqualified placement in shared memory.
+
+Memory visibility is another concern. A writer updating fields and then
+setting a readiness flag needs ordering that ensures the reader sees
+consistent data. Merely observing the same bytes through two mappings
+does not supply a complete concurrency protocol. The locks, atomics,
+and memory-order rules of \cref{ch:concurrency} return here.
+
+The performance advantage consequently comes with a transfer of
+responsibility. The kernel supplies the shared mapping; applications
+must supply more of the agreement about meaning. Shared memory is not
+a faster drop-in replacement for every pipe or socket.
+
+\section{Sockets generalize endpoints}
+
+A socket has an address family, communication type, and protocol context.
+A local Unix-domain socket can connect processes on one host; an Internet
+socket can connect through a network. A server commonly binds a name or
+address, listens, and accepts connections. Accepting returns a connected
+endpoint distinct from the listening endpoint, allowing the server to
+continue receiving new clients.
+
+The descriptor representation makes established connections fit familiar
+I/O operations. Setup and control remain explicit because networks need
+semantics ordinary files do not have. A socket can have a peer, a shutdown
+direction, address information, and protocol-specific options.
+This is a pragmatic extension of the file interface rather than a proof
+that all objects should have identical operations \parencite{unp}.
+
+TCP supplies an ordered reliable byte stream while the connection remains
+usable. It does not preserve application message boundaries.
+A write of a hundred bytes followed by another write of a hundred bytes
+can be read in different-sized pieces. A receiver must accumulate data
+according to a framing rule, such as a fixed header containing a length.
+
+Lengths themselves are untrusted data. Before allocating a buffer, the
+receiver must check bounds and arithmetic overflow. A peer that declares
+a giant message and then sends slowly can consume resources even without
+violating the framing syntax. Protocol design therefore includes limits,
+timeouts, and cancellation, not merely a diagram of packet fields.
+
+\section{A send is not an acknowledgment of application success}
+
+A successful local send often means bytes were accepted into the local
+networking path. It does not prove the remote application parsed them,
+committed a transaction, or even remained alive afterward.
+Transport acknowledgments and application acknowledgments answer different
+questions.
+
+Suppose a client asks a server to charge an account. The server performs
+the operation, then the connection fails before the reply reaches the
+client. Retrying can duplicate the effect; refusing to retry can leave
+the user unable to determine what happened. TCP cannot settle this
+ambiguity because the missing fact concerns the application's persistent
+state, not just delivery of bytes.
+
+Application protocols can use operation identifiers, deduplication,
+idempotent actions, and durable records to make retries meaningful.
+Each mechanism has a scope. An identifier remembered only until a process
+restarts does not provide the same guarantee as one recorded with the
+transaction. ``Exactly once'' requires a precise model of failures and
+storage rather than confidence in the network library.
+
+This is where distributed systems depart most sharply from the experience
+of a local command pipeline. A local kernel can often know that a process
+has exited. Across a network, silence is ambiguous. A timeout is a policy
+decision about waiting, not proof that a peer no longer exists.
+
+\section{Event loops and the cost of waiting}
+\index{event loops}\index{nonblocking I/O}
+
+A server handling many clients cannot always dedicate an expensive thread
+to each idle connection. Readiness interfaces such as select and poll,
+and platform-specific mechanisms such as epoll and kqueue, allow it to
+wait for activity across many descriptors. Their semantics differ;
+readiness and completion are not interchangeable concepts.
+
+Readiness means an operation is likely to make progress under defined
+conditions. Another actor can change the state before the operation runs,
+so nonblocking code must still handle a result that says to try again
+later. A readable descriptor can also indicate end-of-file or an error.
+An event loop needs state for partial messages, pending writes, and
+connection cleanup.
+
+A design can become difficult to maintain when that state is scattered
+among callbacks with unclear ownership. Threads do not automatically solve
+the problem; they move the state into stacks and synchronization.
+The right choice depends on workload, language facilities, and how clearly
+the program can express lifetimes and cancellation.
+
+Unix's communication history is therefore a history of expanding contracts.
+Pipes coordinate nearby processes, signals notify, shared memory exposes
+common data, and sockets connect endpoints whose failures may be only
+partially observable. The interfaces remain compact because they leave
+application meaning to the application. Good engineering begins by
+recognizing exactly where that responsibility starts.

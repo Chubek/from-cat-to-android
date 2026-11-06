@@ -1,0 +1,184 @@
+\chapter{The Command Line Becomes a Language}
+\label{ch:tools}
+\index{shell}\index{pipes}\index{McIlroy, Douglas}
+
+\section{Commands as ordinary programs}
+
+A command line looks like a place to type instructions to the operating
+system. In Unix, most instructions typed there are requests to an ordinary
+program, the shell. The shell interprets syntax, expands names, arranges
+input and output, starts programs, and collects their status. Keeping this
+work outside the kernel made the command language replaceable without
+changing the machinery that protects files and schedules processes.
+
+That distinction explains why Unix could acquire several shells. Thompson's
+early shell, Stephen Bourne's shell, Bill Joy's C shell, the Korn shell,
+and later Bash and others embody different priorities. An interactive user
+may value history and completion; a script author may value predictable
+control flow and portability. A shell can serve both audiences, but changes
+that delight one may surprise the other.
+
+The shell's power rests partly on a modest process interface. It does not
+need a distinct system call for every external command. It can ask the
+kernel to create a process, establish file descriptors, and execute a
+program. A new command installed in a searchable directory becomes part of
+the user's vocabulary. The kernel need not learn its name.
+
+\section{The pipeline as a process graph}
+
+McIlroy repeatedly pressed the value of connecting programs. Pipes became
+a kernel and shell facility early in the 1970s, after Unix had already
+begun to take shape. Their arrival encouraged programs to read standard
+input and write standard output in forms other programs could use.
+Ritchie's evolutionary account is especially valuable because it describes
+a design emerging through use, rather than attributes every later
+convention to the first version \parencite[discussion of pipes]{evolution}.
+
+Consider a deliberately simple analysis of a text file:
+
+\begin{verbatim}
+LC_ALL=C tr -cs 'A-Za-z' '\n' < notes.txt |
+    tr 'A-Z' 'a-z' |
+    sort |
+    uniq -c |
+    sort -nr
+\end{verbatim}
+
+This ASCII-oriented example counts runs of English letters after folding
+case. It is not a general tokenizer for human languages. The first stage
+replaces nonletter runs with newlines, the second folds uppercase, the
+third places equal lines together, and the fourth counts adjacent equal
+lines. The final sort orders the counts. Explicitly narrowing the problem
+makes the example useful without disguising its limitations.
+
+The vertical bar does not mean ``save the whole output, then run the next
+program.'' The shell arranges a graph of processes connected by finite
+kernel buffers. The stages may run concurrently. A writer can block when
+a pipe is full; a reader can block when it is empty and writers remain.
+This backpressure lets a pipeline process a stream larger than memory
+without every stage implementing its own queueing protocol.
+
+One consequence is easy to overlook: unused descriptors must be closed.
+A reader sees end-of-file only when all write references are gone and
+buffered bytes have been consumed. An accidentally inherited write end can
+keep a reader waiting forever. The pipeline's attractive notation hides
+real resource management, explored in \cref{ch:ipc}.
+
+\section{A convention is a protocol}
+\index{standard input}\index{standard error}
+
+Standard input, standard output, and standard error are conventions
+supported by descriptor inheritance. They are not special kinds of files
+created for each command. The shell usually supplies descriptors 0, 1,
+and 2 with useful meanings. A process can replace those bindings, and a
+program that assumes output is always a terminal can break redirection.
+
+Separating diagnostic messages from useful output preserves composition.
+If a tool inserts progress announcements into a stream of filenames or
+numbers, a downstream parser may treat them as data. Exit status is another
+channel. It can distinguish ordinary completion from failure without
+requiring a program to decode human prose.
+
+The conventions are incomplete. Different tools use different status codes;
+\texttt{grep}, for example, distinguishes no match from an execution error.
+Historically, a shell pipeline's reported status usually came from its last
+command. That can conceal an earlier failure. Some shells provide
+\texttt{pipefail}, but its availability depends on shell and specification
+version. A portable script must establish its target environment rather
+than casually assume every useful extension exists everywhere.
+
+Text formats are also protocols. Newline-delimited records are convenient
+until a field can contain a newline. Filenames on Unix can contain spaces,
+tabs, and newlines, although not a slash within a component or a NUL byte.
+Parsing \texttt{ls} output is therefore a poor substitute for an interface
+that passes names unambiguously. On systems that support them,
+\texttt{find -print0} and \texttt{xargs -0} use NUL as a delimiter. Their
+lesson is broader than their syntax: choose a representation in which data
+cannot be mistaken for structure.
+
+\section{Expansion is not just string substitution}
+
+The shell has a distinctive evaluation model. It recognizes syntax,
+performs expansions, removes quoting, and finally passes argument arrays
+to programs. The program does not ordinarily receive the exact command
+line the user typed. It receives separate strings after the shell has
+interpreted that line.
+
+Quoting preserves argument boundaries. If a variable contains a pathname,
+\texttt{"\$name"} normally passes that value as one argument; an unquoted
+expansion in traditional shells can undergo field splitting and pathname
+expansion. A filename containing an asterisk may consequently become an
+accidental pattern. Such bugs are not merely untidy: they can make scripts
+operate on the wrong data.
+
+Command substitution has another important property: traditional shell
+syntax removes trailing newlines from the captured output. That is useful
+for many textual values but means it is not a transparent transport for
+arbitrary bytes. The shell is an orchestration language whose data model
+fits names and commands better than unrestricted binary content.
+
+Greenberg, Kallas, and Vasilakis argue that the shell remains worth
+improving precisely because its dynamism, power, and ubiquity are hard to
+replace. Their account of research on semantics and parallel execution
+shows that apparent informality need not prevent rigorous analysis.
+A pipeline can sometimes be transformed into a more parallel dataflow
+graph, but only when the tools' behavior and side effects are sufficiently
+understood \parencite{shell-future}.
+
+\section{Editors and the growth of an environment}
+\index{ed}\index{vi}\index{Emacs}\index{awk}\index{sed}\index{grep}
+
+Editors changed alongside terminals. The line editor ed made sense when
+printing a screenful of context was expensive. Its compact address and
+substitution language could operate on a file without repainting a display.
+Stream-oriented transformations later flourished in sed, while grep made
+pattern-based selection a reusable command. These tools are related by
+technique and culture, although their exact behavior and pattern languages
+should not be treated as identical.
+
+Awk added records, fields, associative arrays, and pattern-action rules.
+It occupies an instructive middle ground: more structure than a bare filter,
+less ceremony than a compiled application for many reporting tasks.
+A task that becomes an unreadable shell tangle may become a clear awk
+program because the data model better matches the work.
+
+Vi emerged from Berkeley's screen-editing environment, with ex beneath its
+visual interface. Emacs came from a different editing and Lisp tradition
+and became a major part of Unix environments. Both demonstrate that Unix
+users have always embraced powerful, stateful applications. Their
+popularity cannot be reconciled with a literal rule that every program
+must be a tiny stateless filter.
+
+The manual, too, was part of the programming environment. Commands,
+library functions, system calls, file formats, and administration procedures
+could be documented in a common framework. A reference manual is not a
+substitute for a tutorial, but it creates an expectation that interfaces
+have names and descriptions that can be consulted locally.
+
+\section{From improvisation to maintained automation}
+
+A command typed once can rely on what its author happens to know about the
+current directory and input. A script handed to someone else cannot.
+It needs explicit assumptions about arguments, environment, working
+directory, temporary files, errors, and cleanup. Interactive convenience
+becomes a maintenance liability when those assumptions remain invisible.
+
+Kernighan and Pike's treatment of the programming environment is valuable
+because it connects tool use with program construction. Commands become
+building blocks for experiments; successful experiments can become tools;
+repeated work can move into scripts or a better-suited language. This is
+a method of development rather than a claim that all software ought to be
+written in shell \parencite{programming-env}.
+
+The environment also changes the cost of asking questions. If a directory
+of text files can be searched immediately, users can investigate before
+building a specialized interface. If a transformation can be expressed as
+four inspectable stages, an intermediate result can be checked. This is
+one reason the command line survives in graphical environments: it offers
+a compact language for combinations the interface designer did not predict.
+
+The price is that users inherit responsibility for composition. A misspelled
+pattern or unchecked status can invalidate a plausible-looking result.
+The command line is most valuable when its operators treat each connection
+as an agreement about data and failure. That discipline, more than terseness
+or nostalgia, is what makes the Unix programming environment durable.

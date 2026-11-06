@@ -1,0 +1,198 @@
+\chapter{Building Programs, Building Environments}
+\label{ch:development}
+\index{compilers}\index{yacc}\index{lex}\index{make}\index{development tools}
+
+\section{The toolchain is part of the system}
+
+Unix offered a place to write programs, not merely a place to execute
+finished applications. An editor, compiler, assembler, linker, debugger,
+and manual formed a practical sequence from idea to running code.
+Their boundaries made it possible to replace one stage or inspect an
+intermediate result. A compiler error and a linker error could be located
+in different parts of the construction process.
+
+This environment also sustained itself. The system's programs were built
+on the system, and its documentation was prepared with its document tools.
+The 1974 paper calls attention to this self-supporting quality.
+It mattered institutionally: improvements to the tools immediately
+improved the developers' ability to improve the system
+\parencite[sec. 1]{ritchie-thompson}.
+
+C benefited from that environment, but Unix was never exclusively a
+C-language world. Fortran supported numerical work; assemblers remained
+necessary; interpreters and little languages served specialized tasks.
+Later Lisp, ML-family languages, scripting languages, and managed runtimes
+found homes there. A process interface based on arguments, descriptors,
+and status does not require all participants to share a source language.
+
+\section{Generators turn descriptions into code}
+
+Stephen Johnson's yacc generated parsers from a grammar and associated
+actions. Lex, associated with Michael Lesk and Eric Schmidt, generated
+lexical analyzers from pattern descriptions. The pairing made language
+implementation more accessible by expressing recurring machinery as
+specifications rather than rewriting every state transition by hand.
+
+A lexical analyzer recognizes tokens; a parser relates those tokens to
+a grammar. The distinction helps authors separate character-level details
+from structural rules. It does not eliminate ambiguity or semantic
+analysis. A grammar can be ambiguous, an action can have a bug, and a
+perfectly parsed program can still be meaningless.
+
+Generators also create a maintenance obligation. The generated file may
+be difficult to review directly; the grammar and generator version become
+essential inputs. Checking in generated output can make bootstrapping
+easier while introducing the risk that source and output diverge.
+A build needs a declared rule for which representation is authoritative.
+
+These tools belong to the same family of ideas as eqn and tbl.
+Each lets an author work in a representation closer to the problem,
+then translates it into a lower-level mechanism. The common principle is
+not that every problem needs a new language. It is that a suitable
+representation can remove repetitive reasoning from ordinary code.
+
+\section{Make records relationships}
+
+Stuart Feldman's make addressed the repeated work of rebuilding programs.
+A project contains targets and prerequisites. If an input has changed,
+the relevant target and its dependents need rebuilding. Encoding these
+relationships lets the tool decide what work is necessary.
+
+A small original example is enough to show the model:
+
+\begin{verbatim}
+report: report.o parse.o
+        cc -o report report.o parse.o
+
+report.o: report.c parse.h
+        cc -c report.c
+
+parse.o: parse.c parse.h
+        cc -c parse.c
+\end{verbatim}
+
+In an actual makefile, each recipe begins with a tab. The example's
+important content is the dependency graph, including the header.
+If the header is omitted, the build may succeed while leaving an object
+file compiled against an obsolete declaration. Incremental correctness
+depends on complete inputs, not only on convenient command notation.
+
+Traditional timestamp-based decisions are economical, but they have
+limits. Generated inputs, clock differences, hidden environment changes,
+and tools whose versions are not recorded can produce stale or
+nonreproducible output. Modern build systems use techniques such as
+content hashing, declared toolchains, sandboxed actions, and remote caches.
+These are extensions of the desire to make the construction process
+explicit.
+
+A document build has the same structure. Citations require bibliography
+processing; references may require reruns; an index has its own processor.
+A single successful typesetting pass is not necessarily a finished book.
+The build system in this repository delegates that dependency work to
+latexmk rather than expecting the reader to remember an invocation sequence.
+
+\section{Debugging depends on observable state}
+\index{debuggers}\index{tracing}
+
+A debugger connects machine behavior to source-level expectations.
+It can stop execution, inspect variables, examine a stack, and report
+where a failure occurred. Optimized code complicates that relationship:
+a variable can disappear, instructions can move, and the stack may not
+resemble a simple sequence of source calls.
+
+Tracing offers a complementary view. A system-call trace can show which
+files a program opens, where it blocks, and what the kernel reports.
+It can reveal a missing configuration file or a permission error without
+understanding every internal function. It cannot by itself explain all
+user-space computation or prove that a program's result is correct.
+
+Profiling asks yet another question: where does time or another resource
+go? Sampling, counters, and instrumented events expose different aspects
+of behavior. Measurement overhead and attribution rules matter.
+A program waiting for a remote service may consume little CPU while
+remaining painfully slow for its user.
+
+Unix's preference for inspectable files and separate processes often makes
+such tools convenient, but observability is not automatic.
+A program must preserve useful error context, avoid corrupting data
+streams with diagnostics, and give administrators enough information to
+connect a failure with its cause. Silence on ordinary success is compatible
+with detailed evidence when something goes wrong.
+
+\section{Versions make collaboration historical}
+\index{SCCS}\index{RCS}\index{Git}\index{version control}
+
+SCCS and RCS supported source history before the distributed systems now
+familiar to many programmers. Later systems expanded collaboration across
+repositories and institutions. Git, developed in 2005 in the setting of
+Linux kernel development, made content-addressed objects and distributed
+history central to a widely adopted workflow.
+
+A version-control system preserves relationships among states.
+It can show what changed, associate a change with an explanation, and
+support branching and merging. It cannot supply a good explanation if
+the author records only ``fix.'' Nor can a clean merge prove semantic
+compatibility: two edits can apply without conflict and still violate a
+shared invariant.
+
+History also supports investigation. A regression can be narrowed by
+searching for the change that introduced it. An old implementation can
+be compared with a later one. Spinellis's reconstruction extends this
+practice to periods before the relevant systems used a continuous modern
+repository, while warning readers not to mistake reconstructed metadata
+for an untouched contemporaneous record \parencite{spinellis}.
+
+The repository is thus both a collaboration mechanism and an argument
+about provenance. Source history is especially valuable when accompanied
+by build instructions and tests that make older states interpretable.
+Without those, preservation can become a collection of files whose
+behavior nobody can reproduce.
+
+\section{Languages beyond C}
+\index{ML}\index{OCaml}\index{Standard ML}
+
+The supplied collection includes Unix programming treatments in Standard
+ML and OCaml. Their presence is a useful corrective to histories that
+identify Unix programming with a single syntax. File descriptors,
+processes, and sockets can be exposed through different type systems and
+runtime models. The operating-system contract survives translation into
+a language's abstractions.
+
+A managed language may wrap a descriptor in an object with buffering,
+exceptions, or automatic cleanup. Those features can make programs safer,
+but they do not repeal the underlying semantics. Garbage collection does
+not guarantee timely release of a scarce descriptor. A buffered channel
+can retain data the kernel has not yet seen. An exception can interrupt
+a multi-step protocol before cleanup finishes.
+
+Type systems can express distinctions that C convention leaves implicit.
+They may help separate bytes from text, optional values from present ones,
+and valid states from invalid combinations. At foreign-function boundaries,
+those guarantees need careful preservation. An unchecked C interface can
+reintroduce lifetime and representation errors beneath a safe wrapper.
+
+The larger lesson is that Unix supplies useful primitive agreements,
+while languages can improve how programmers handle them. The right
+abstraction can expose an important failure rather than hide it.
+A function returning a result that must be checked is often more helpful
+than a convenient wrapper that silently discards the distinction.
+
+\section{A development environment is an accumulated promise}
+
+Over decades, Unix environments grew from a small local toolkit into
+platforms hosting enormous language ecosystems. Package registries,
+generated code, native libraries, compiler versions, and deployment
+runtimes added dependencies far beyond a handful of C files.
+The task of understanding a build became correspondingly harder.
+
+The original strengths remain useful when applied deliberately.
+Record inputs. Keep stages inspectable. Distinguish generated artifacts
+from their sources. Make failure visible. Preserve enough history to
+explain why a choice was made. These practices do not depend on a
+particular shell or compiler.
+
+They also connect programming with the subject of the next chapter.
+Raymond's account of the Unix tradition turns many such practices into
+explicit design advice. The advice is most useful when tested against
+concrete programs and against the objections of users who have paid for
+its failures.

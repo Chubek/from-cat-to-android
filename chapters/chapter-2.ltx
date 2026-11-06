@@ -1,0 +1,202 @@
+\chapter{Paper, Light, and Little Languages}
+\label{ch:typesetting}
+\index{C/A/T phototypesetter}\index{troff}\index{Ossanna, Joseph}\index{document preparation}
+
+\section{The printed page was a computing problem}
+
+A patent application or mathematical paper is more than a sequence of
+letters. It contains hierarchy, symbols, alignment, references, and layout
+constraints. An editor lets an author change the sequence; a formatter
+interprets that sequence as instructions for a page. Unix's early success
+in document preparation joined these two activities without pretending
+they were identical.
+
+This separation had practical consequences. The same source could be
+revised, searched, compared, stored on tape, and formatted repeatedly.
+An author could change a paragraph without retyping an entire page.
+Formatting rules could be improved in a program or macro package rather
+than enforced through repeated manual correction. The page became the
+output of a computation whose inputs remained available for further work.
+
+The distinction is familiar in modern publishing, where documents may be
+built from Markdown, XML, or LaTeX. It was already useful on hardware whose
+most common output device resembled a typewriter. Unix did not invent every
+part of this tradition. Its formatters descended through earlier systems,
+including runoff and roff. What it supplied was a particularly fertile
+environment for combining editors, formatters, preprocessors, and devices
+\parencite{evolution,roddy}.
+
+\section{What the C/A/T actually did}
+
+In 1973 Joe Ossanna arranged for a Graphic Systems CAT phototypesetter at
+Bell Labs. The machine commonly styled C/A/T exposed character images onto
+photographic paper. Fonts existed as physical images on film mounted in a
+rotating mechanism. Selecting a character, positioning it, changing size,
+and exposing the image involved hardware with mechanical limitations.
+It was not a laser printer waiting to be driven by a convenient page
+language.
+
+Kernighan's memoir describes four fonts of 102 characters on the wheel and
+sixteen available sizes. The photographic output then required chemical
+processing. These details matter because they explain why typography could
+shape software structure. A formatter had to know enough about widths and
+positioning to produce attractive output while respecting what the device
+could actually do. High quality did not imply easy operation
+\parencite[discussion of the Graphic Systems CAT]{kernighan-history}.
+
+Ossanna's troff turned that device into a publishing resource. Its name
+identified a typesetter-oriented member of the formatter family; nroff
+served terminal-like output. The two shared much of their input language,
+allowing a document to be proofread cheaply and then typeset. The common
+source was valuable even when the proof could not reproduce every
+mathematical symbol or spacing decision exactly.
+
+The C/A/T therefore belongs in a history of Unix for more than picturesque
+reasons. It connected the operating system to a task whose result could be
+judged by people who did not care how the kernel was organized. A cleanly
+printed paper was visible evidence that the tools worked. Better output
+also raised expectations and motivated better tools.
+
+\section{Requests, text, and macro packages}
+\index{macros!troff}
+
+A roff-family input file mixes text with requests. A line beginning with a
+control character can select a font, set spacing, or invoke a macro.
+The formatter reads an instruction stream, maintains state, and emits
+positioned material. It is useful to think of this as an interpreter rather
+than as a typewriter with unusually complicated keys.
+
+Raw formatting requests expose too many details for ordinary authors.
+A macro package provides a higher-level vocabulary for paragraphs,
+headings, titles, lists, and notes. Consider this newly written fragment
+in the traditional \texttt{ms} style:
+
+\begin{verbatim}
+.TL
+A Small System for a Large Task
+.AU
+An Example Author
+.SH
+The document as a program
+.PP
+The source describes a paragraph.
+The formatter chooses the line breaks.
+\end{verbatim}
+
+The author identifies document roles rather than manually placing every
+line. A macro package can change the visual treatment of a heading across
+an entire document. Cherry and Lesk's account of the \texttt{ms} and
+\texttt{mcs} packages shows how this vocabulary also accommodated equations,
+tables, cover sheets, and institutional styles. Macro naming had to preserve
+compatibility: a document corpus already depending on old commands was a
+real constraint on improvement \parencite{cherry-lesk}.
+
+There is an enduring design tension here. A rich macro language permits
+local customization, but too much state and too many implicit conventions
+make documents difficult to reason about. A formatter may accept valid
+input that nevertheless produces a bad page. Program correctness and
+editorial correctness are different tests. A build can finish without
+proving that a table is readable or a heading is useful.
+
+\section{Equations and tables as separate languages}
+\index{eqn}\index{tbl}\index{pic}\index{Cherry, Lorinda}
+
+Mathematics is awkward to express using only primitive position changes.
+Kernighan and Lorinda Cherry's eqn allowed an author to describe mathematical
+relationships with words such as ``over,'' ``sup,'' and ``sqrt.'' The
+preprocessor translated that description into lower-level formatting
+instructions. The author worked closer to the structure of the expression
+than to the motion of a typesetter.
+
+Tables present a different problem. They need column descriptions,
+alignment, rules, and repeating patterns. Michael Lesk's tbl supplied a
+language for that domain. Later, pic offered a language for diagrams.
+These programs were not merely collections of shortcuts. Each captured a
+small body of knowledge and translated it into a form a more general
+formatter could consume.
+
+A schematic pipeline makes the organization clear:
+
+\begin{center}
+\begin{tikzpicture}[every node/.style={draw,rounded corners,font=\small,minimum height=9mm}]
+\node (s) at (0,0) {Source};
+\node (p) at (3,0) {Preprocessors};
+\node (t) at (6.2,0) {troff};
+\node (d) at (9,0) {Device output};
+\draw[->] (s) -- (p);
+\draw[->] (p) -- (t);
+\draw[->] (t) -- (d);
+\end{tikzpicture}
+\end{center}
+
+The ordering of actual preprocessors depends on the document. An equation
+inside a table can constrain which transformation must happen first.
+Composition is powerful because the stages communicate through agreed
+representations; it is fragile when those agreements are misunderstood.
+A pipeline is not automatically correct simply because every component
+works separately.
+
+The little-language approach also changes who can contribute. Someone who
+understands tables can improve tbl without becoming an expert in disk
+allocation. Someone who understands typography can improve macros without
+rewriting the shell. The interface between programs becomes an organizational
+boundary as well as a technical one.
+
+\section{From one device to many}
+
+The original troff was closely associated with the C/A/T. As other output
+devices became attractive, hardwired assumptions became a cost.
+Kernighan's device-independent troff separated formatting from a particular
+machine's final output encoding. A backend could translate intermediate
+output for a different typesetter or printer. This was a substantial
+architectural change: it made the boundary between document layout and
+device operation explicit.
+
+Device independence is always qualified. Font metrics affect line breaking,
+available glyphs affect notation, and device resolution affects appearance.
+An intermediate language cannot make these differences disappear. It can
+localize the knowledge needed to handle them. That is a more useful goal
+than promising that every printer will produce identical pages.
+
+Later implementations, especially groff, carried the tradition into free
+software systems and new output formats. Manual pages kept the roff family
+visible even when most users no longer prepared papers in troff. A command
+such as \texttt{man} appears to present text, but its source tradition
+includes semantic macros, formatters, pagers, terminal capabilities, and
+installation conventions. The apparent simplicity is the result of a
+pipeline of maintained agreements.
+
+TeX and LaTeX belong beside this history without being troff descendants.
+TeX pursued its own model of mathematical and typographic precision.
+LaTeX emphasized document structure through a macro layer. Unix provided
+an accommodating environment for such tools because files, command
+execution, and redirection did not reserve publishing for one privileged
+application. The book in the reader's hands uses LaTeX, while the title
+acknowledges a different publishing lineage.
+
+\section{What publishing taught the system}
+
+Document preparation exercised Unix as a complete environment. It required
+interactive editing, reliable files, stable tools, reproducible commands,
+and output whose defects humans could see immediately. It rewarded the
+ability to combine a specialized preprocessor with a general formatter.
+It also exposed the cost of poorly defined interfaces: a change in a macro,
+font table, or backend could alter a document far from the changed code.
+
+That experience complicates the familiar slogan about doing one thing
+well. Troff itself is a substantial interpreter. Macro packages can be
+complex programs. A useful tool boundary need not produce a tiny program;
+it should concentrate a coherent responsibility. Eqn's responsibility was
+mathematical expression layout, not an arbitrary limit on source-code size.
+
+Publishing also gave users reasons to preserve source. A photographic page
+is an artifact; the editable file and its toolchain explain how that artifact
+was made. Modern reproducible research and documentation builds extend the
+same concern. When source, tools, fonts, and invocation are recorded, later
+readers can revise the work instead of merely admiring the output.
+
+The path from patent typists to technical publishing shows how a local need
+can become a general method. Unix did not become useful because it insisted
+that every problem was text. It became useful because text was a workable,
+inspectable representation for many problems, and because the system let
+users build new interpreters when ordinary text processing was insufficient.

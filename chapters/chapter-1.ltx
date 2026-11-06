@@ -1,0 +1,175 @@
+\chapter{A Fellowship Around a Small Machine}
+\label{ch:origins}
+\index{Bell Laboratories}\index{Multics}\index{Thompson, Ken}\index{Ritchie, Dennis}
+
+\section{What was lost when Multics went away}
+
+Unix began at Bell Laboratories, not at an institution called ``Unix Labs.''
+In 1969, Bell Labs was withdrawing from Multics, the ambitious time-sharing
+project undertaken with MIT and General Electric. Multics proposed a
+computing utility: many people would share a powerful installation through
+interactive terminals, with persistent files and carefully structured
+protection. Its ambitions were not absurd. Many later systems would adopt
+ideas it explored. The difficulty for Bell Labs was the expense and slow
+arrival of a service that met immediate needs.
+
+For Ken Thompson, Dennis Ritchie, Doug McIlroy, and Joe Ossanna, withdrawal
+also meant losing an appealing way to work. An interactive system was more
+than a faster replacement for submitting decks of punched cards. It let
+people keep programs, documents, and unfinished thoughts in a common place.
+Ritchie's account emphasizes the wish to preserve a fellowship around
+computing. That social purpose helps explain why a small operating system
+could become a large cultural influence. Its users were also its authors,
+and improvement could begin as a conversation down a corridor
+\parencite[``Origins'']{evolution}.
+
+This does not mean that Unix emerged in a vacuum of unlimited freedom.
+Computers required budgets, management approval, maintenance, and a
+credible reason to exist. Proposals for a substantial replacement machine
+failed to produce the desired purchase. The available opportunity was a
+little-used PDP-7. Thompson's experiments with a space-travel game formed
+part of the immediate setting, but the game is an inadequate explanation
+for the operating system. A game could motivate graphics work without
+explaining directories, process creation, or a community's programming
+practice.
+
+The useful historical question is therefore not which amusing incident
+``caused Unix.'' It is how limited hardware and a particular community
+encouraged a workable set of compromises. The participants wanted an
+interactive environment they could understand and alter. They could not
+build the full computing utility promised by Multics. They could implement
+an environment that made their own daily work better.
+
+\section{The PDP-7 was a beginning, not the finished design}
+
+The earliest system was written in assembly language. It established parts
+of the file and process model, but it was not a miniature copy of a modern
+Linux distribution. Ritchie describes successive experiments in file
+naming, links, and process control. Features now presented as a timeless
+Unix philosophy were often the results of replacing something awkward with
+something easier to use. Reading the early history as a sequence of
+revisions gives the designers more credit than imagining they possessed a
+complete blueprint from the outset.
+
+The file hierarchy gave users a way to organize persistent objects. A
+process gave a running computation an identity and an environment. A
+command interpreter let users request work without making each command a
+special operation inside the kernel. These abstractions reinforced one
+another. A command could name an ordinary file, become a process, and
+operate on other files. New commands could be added without redesigning the
+operating system's central control path.
+
+The division between the kernel and the command environment was especially
+consequential. Hardware protection and resource arbitration belonged in the
+kernel. Most choices about useful work could be expressed by ordinary
+programs. An editor was indispensable to the environment, but it did not
+need privileged knowledge of how the scheduler worked. This separation
+made the system expandable by people who were not kernel authors.
+
+Early Unix nevertheless carried constraints that later readers should not
+romanticize. Memory and disk space were scarce, peripherals were slow, and
+crashes could destroy work. A terse interface saved typing on slow
+terminals, but it also made commands hard to discover. Some of the features
+that feel elegant in retrospect were successful accommodations to severe
+limitations. Their survival does not prove that every limitation deserved
+to survive with them.
+
+\section{The PDP-11 and a practical constituency}
+\index{PDP-11}\index{patent applications}
+
+The move to a PDP-11 made a larger future possible. The early PDP-11/20
+installation was still modest and lacked the memory protection of later
+machines. Its justification included document preparation for the patent
+department. An editor and formatter were therefore not optional
+accessories. They were part of the reason the machine could be acquired
+and kept useful.
+
+Ritchie recalls supporting three patent typists during the latter half of
+1971 while the developers continued experimenting with the system. Their
+requirements were concrete: mathematical symbols and line-numbered pages
+for patent applications. A formatter could be adapted quickly to provide a
+feature that a competing commercial system did not provide. This was a
+small demonstration of a general advantage: ownership of the implementation
+could make an unusual local requirement inexpensive to satisfy
+\parencite[discussion of the PDP-11]{evolution}.
+
+The experiment was precarious. A programming mistake could bring down the
+same machine on which typists were doing productive work. The disk was
+small enough that material had to be moved to tape frequently. Yet the
+service worked well enough to win institutional support for a more capable
+PDP-11/45. Unix's first expansion thus involved evidence of usefulness,
+not only persuasion about architectural elegance.
+
+The 1974 paper by Ritchie and Thompson describes a system already serving
+multiple installations and tasks: patent work, telephone-service data,
+research, programming, and document preparation. It reports the PDP-11
+system of its own period. Its hardware figures and limits must not be
+silently transferred backward to the PDP-7 or forward to Sixth Edition.
+An edition label is a historical coordinate, not a decorative suffix
+\parencite[secs. 1--2]{ritchie-thompson}.
+
+\section{Why C changed what could travel}
+\index{C language}\index{portability}
+
+Thompson's B, derived from BCPL, preceded C. B's word-oriented model and
+implementation did not fit every aspect of the byte-addressed PDP-11
+comfortably. Ritchie's work on C added a type system and operations suited
+to expressing the data structures and machine-level work the kernel
+required. The important result was not simply a more convenient syntax.
+It was the ability to describe most of an operating system in a form that
+could be retargeted to another machine.
+
+The 1973 rewrite of the kernel in C is a major turning point, but ``written
+in C'' does not mean independent of hardware. A kernel still needs startup
+code, trap entry, context switching, access to device registers, and
+knowledge of memory-management hardware. C also permits assumptions about
+word sizes, byte order, alignment, and representation that can make a
+program effectively machine-specific. Portability had to be engineered
+through interfaces and disciplined assumptions; a language merely made that
+engineering more tractable.
+
+Later ports, including work on Interdata machines, tested the claim in a
+way that repeating it on PDP-11s could not. A compiler could absorb many
+instruction-set differences. Kernel code could retain the organization of
+processes, files, and devices while selected machine-dependent sections
+changed. That arrangement would become a template for later operating
+systems and for the software industries built around them
+\parencite[``Portability'']{kernighan-history}.
+
+C and Unix also formed a feedback loop. Unix offered a productive place to
+implement compilers and tools. C offered a compact way to extend Unix.
+Programs written for that environment spread the language, while a growing
+population of C programmers made new Unix software easier to produce.
+Neither language popularity nor operating-system adoption has a single
+cause, but this mutual reinforcement is difficult to miss.
+
+\section{A publication becomes an invitation}
+
+The public presentation in 1973 and the revised paper in 1974 made Unix
+legible to a wider technical audience. Its claims were unusually tangible:
+a hierarchical file system, compatible I/O for different objects, separate
+processes, a replaceable command language, and an extensive collection of
+programs. A reader could recognize a complete working environment rather
+than an isolated research mechanism.
+
+Distribution outside Bell Labs depended on licensing. The legal and
+business setting of AT\&T encouraged a form of software circulation very
+different from selling a fully supported consumer product. Universities
+could obtain source under license, study it, and exchange knowledge with
+other authorized users. They did not thereby acquire the unrestricted
+redistribution rights associated with later free software. Source
+availability and freedom to redistribute are separate historical facts.
+
+That distinction matters when celebrating Unix as an ancestor of open
+source. Early participants built a vigorous sharing culture, but its legal
+boundaries excluded people. The desire to teach from the kernel would later
+make those boundaries painfully visible in the story of Lions's commentary.
+The small system was easy enough to explain; permission to circulate the
+explanation was another matter.
+
+By the middle of the 1970s, Unix had several foundations for expansion:
+a credible practical workload, a comprehensible kernel, a productive
+language, and users willing to teach one another. It also had a particular
+view of composition. The next two chapters follow that view into printed
+pages and command lines, where some of its most durable inventions became
+part of ordinary work.

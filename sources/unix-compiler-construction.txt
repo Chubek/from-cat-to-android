@@ -1,0 +1,5671 @@
+I
+
+R0006018831
+
+Introduction
+to Compiler Construction
+with UNIX*
+
+Informatik
+
+Sektion
+
+Axel T. Schreiner
+University of Ulm, West Germany
+
+H. George Friedman, Jr.
+Department of Computer Science
+University of Illinois at Urbana-Champaign
+
+Prentice-Hall, Inc.
+Englewood Cliffs, NJ 07632
+UNLX
+
+*
+
+is a trademark of Bell Laboratories
+
+Library of Congress Catalog Card Number: 84-631)39
+
+Editorial/production supervision:
+Palumbo
+Sophia
+Cover design: Lundgren Graphics
+Manufacturing buyer: Gordon
+PapnikoluBrb
+
+Osbourne
+
+UNIX is a trademark of Bell Laboratories.
+
+Inc., Englewood Cliffs, New Jersey 07632
+
+Prentice-Hall Software Series, Brian W.
+
+advisor.
+Kernigha,
+
+Prentic-Hal,
+
+C 1985 by
+
+All rights reserved. No part of this book may be
+reproduced, in any form or by any means,
+without permission in writing from the publisher.
+
+Printed in the United States of America
+I0 9 8
+
+01
+
+ISBN 0-13 474396 2
+-
+
+-
+
+PRENTIC-HAL
+
+PRENTICE-HALL INTERNATIONAL, INC. , London
+OF AUSTRALIA PTY. LIMITED, Sydney
+
+EDITORA PRENTIC-HAL
+
+DC) BRASIL, Li DA. ,
+
+Rio de Janeiro
+
+PRENTICE-HALL HISPANOMERC,
+
+S.A,
+
+PRENTICE-HALL CANADA INC., Toronto
+
+Mexico
+
+PRENTICE-HALL OF INDIA PRIVATE LIMITED, New Delhi
+PRENTICE-HALL OF JAPAN, INC.,
+
+Tokyo
+
+PRENTICE-HALL OF SOUTHEAST ASIA PTA.
+
+LTD., Singapore
+
+WHITEHALL BOOKS LIMITED, Wellington, New Zealand
+
+To Carol and Claudia,
+who put up with us.
+
+Contents
+
+ix
+
+Introduction
+
+1
+1
+3
+6
+
+Language Definition
+1.1 Purpose
+1.2 Mechanical aspects
+1.3 Convenient grammars
+1.4 Checking a grammar
+1.5 Common pitfalls
+1.6 Example
+1.7 A note on typography
+1.8 Problems
+
+12
+14
+19
+20
+
+2.
+
+Word Recognition
+2.1 Purpose
+2.2 Definition tools
+2.3 Patterns
+2.4 Ambiguity as a virtue
+2.5 lex programs
+2.6 Testing a lexical analyzer
+2.7 Example
+2.8 Problems
+
+21
+21
+21
+23
+26
+27
+30
+31
+35
+
+3.
+
+Language Recognition
+3.1 Parser generation
+3.2 Example
+3.3 Auxiliary functions
+3.4 Debugging the parser
+3.5 User-defined terminal symbols
+3.6 Typing the value stack
+3.7 Example
+3.8 Problems
+
+37
+37
+40
+42
+46
+51
+53
+55
+63
+
+4.
+
+Error Recovery
+4.1 The problem
+4.2 Basic techniques
+4.3 Adding the error symbols
+actions
+4.4 Adding the
+4.5 Example
+4.6 Problems
+
+65
+65
+66
+70
+74
+75
+81
+
+6.
+
+Semantic Restrictions
+5.1 The problem
+5.2 Symbol table principles
+5.3 Example
+
+83
+83
+85
+86
+
+1.
+
+yerok
+
+CONTENTS
+
+viii
+
+5.4 Typing the value stack
+5.5 Problems
+
+103
+104
+
+6.
+
+Memory Allocation
+6.1 Principles
+6.2 Example
+6.3 Problems
+
+105
+105
+108
+115
+
+7.
+
+Code Generation
+7.1 Principles
+7.2 Example
+7.3 Problems
+
+117
+117
+117
+128
+
+8.
+
+A Load and Go System
+8.1 A machine simulator
+8.2 In-core code generation
+8.3 Example
+8.4 Problems
+8.5 Projects
+
+131
+131
+138
+145
+147
+147
+
+-
+
+Compiler Listing
+A.1 Syntax analysis
+A.2 Lexical analysis
+Messages
+A.3
+A.4 Symbol table routines
+A.5 Memory allocation
+A.6 Code generation
+A.7 A load-and-go system
+A.8 Improved error messages from yaccpar
+A.9 Improved debugging output from yaccpar
+A.10 Regression testing
+
+"sampleC
+
+A.
+
+-
+
+149
+149
+156
+156
+158
+165
+167
+172
+182
+185
+186
+
+References
+
+189
+
+Index
+
+191
+
+Introduction
+
+sampleC,
+
+0
+
+Better user interfaces, especially to the many micro computers which are becoming so popular, often require recognition and processing of rather elaborate command
+languages. Language recognition thus has many applications. However, it can be
+downright unpleasant if done ad-hack. Building a compiler illustrates one application
+of language recognition. It also illustrates how to design and implement a large program with tools and succ es sive extensions of a basic design. Understanding a simple
+compiler is interesting in its own right: it helps one to master and better utilize programming systems in general.
+This book is a. case study: how to create a compiler using generators such as yacc
+(LALR(1) parser generator) and lex (regular expression based lexical analyzer generator), two very powerful yet reasonably easy to use tools available under the UNIX' system.
+A very simple subset of C, called
+is defined and used as an example for
+compiler development. The resulting implementation of sampleC
+is not intended as an
+end in itself, and is therefore allowed to produce less than optimal object code.
+Suggestions for improvements to the code and extensions to the language are given as
+problems for the reader in several chapters.
+The text largely avoids theoretical details, such as detailed discussion of grammars, or explanations of the internal workings of the generators, but it does suggest
+readings. It explains at least the simpler aspects of using the generators.
+As a result, on one level we present a tutorial on how to use the generators to get
+a simple, easily modifiable implementation done quickly and reliably. On another level,
+the reader learns practical details about the components of a compiler and the customary interfaces between them.
+As such, the text is intended both as a short exposition preceding detailed algorithm studies in compiler construction, and as a description of how to productively
+employ the generators described. It is not intended to be a comprehensive treatment
+of the subject of compiler design. Neither does it discuss all aspects of using the generators; once the text has been read, the original descriptions of the generators
+and [Les78b]
+are accessible, and they are intended to be used as references to accompany the text. Since a compiler is a large program, the text demonstrates how such a
+program can be structured and designed with attention to debugging, extension, and
+maintenance issues.
+The reader is expected to have a working knowledge of an editor, of the host
+machine's file system manipulations, and — of course — of C, in which all the examples are written. Knowledge of other languages, such as Pascal, Fortran, or Basic,
+would also be useful to the reader. An understanding of block structured languages
+such as C and their scope rules and of data structures such as stacks, is important
+beginning with chapter 5. Some experience with a. pattern matching editor is assumed
+in chapter 2.
+
+I
+
+[Joh781
+
+;
+
+t UNIX is a trademark of Bell Laboratories.
+
+4
+
+INTRODUCTION
+
+A few words about terminology. We make a careful distinction between the
+declaration of a variable, function, label, or other program element, and the definition
+of that element. A declaration is merely a statement that a. program element exists
+and has certain characteristics, such as the type of a variable, the types of the parameters and return value of a function, etc. A definition gives substance to a declared program element, by providing a value for a variable, a body of code for a function, a
+location for a label, etc.
+
+al
+
+In discussing grammars, we have departed slightly from traditional terminology.
+We prefer to avoid the word production and the terms right hand side and left hand
+of the productions (and the
+side. Instead, we refer to a rule, by which we mean
+alternative right hand sides) of a given non-terminal symbol, and to a formulation, by
+which we mean one of the alternatives on the right hand side of a rule.
+Machine readable source files for the examples in this book can be obtained from
+the second author, e.g., over ARPANET, BITNET, CSNET, or USENET.
+We would like to thank the reviewer for his constructive suggestions. We also
+gratefully acknowledge the use of the computer facilities of the Computer Science
+Department of the University of Illinois at Urbana-Champaign, which are supported in
+part by NSF grant MCS 81-05896, and of the Sektion Informatik of the University of
+Ulm, with which this book was developed, composed, and typeset.
+ATS
+HGF
+Urbana, Illinois
+
+Chapter 1
+Language Definition
+A compiler accepts a source program — a program written in some source
+language — and constructs an equivalent object program written in an object
+language, such as assembler language or binary machine language. In other words, a
+compiler must recognize an input source program and check it for consistency of grammar and meaning, then compose an equivalent object program.
+Before we can build a compiler, we need to discuss the mechanics of language
+definition. The present chapter will describe methods of specifying the grammar of a
+source language, and of checking the correctness of that grammar. The next chapter
+will show how the individual "words" of the source language can be recognized. In
+chapter 3, we will combine these two aspects of a compiler so that it can recognize a
+correct source program, and in chapter 4, we will extend it so that it can do something
+"reasonable" even with an incorrect source program. Subsequent chapters will show
+how to save information needed during compilation and how to use this information to
+finally generate an object program.
+1.1 Purpose
+Two aspects constitute a language definition: syntax and semantics. The syntax
+deals with the mechanical aspects, namely whether or not a sequence of words (or
+letters) is a sentence in the language. What the sentence means — and sometimes
+whether it is legitimate on that account — is determined by the semantics of the
+language.
+Formal notations exist for both parts of the language definition. The syntax is
+usually explained through a sequence of models describing the parts of a sentence.
+Syntax graphs, pioneered by Wirth in the definition of Pascal, are drawn like
+flowcharts:
+
+COMPILER CONSTRUCTION
+
+CHAPTER
+
+I
+
+2
+
+Backus Naur Form (BNF) is a language in which the syntax of a language (even of
+BNF itself) can be specified:
+expression
+expression '+
+
+:
+
+I expression '1
+
+product
+
+product
+product
+
+product
+
+'*
+
+'/
+
+factor
+
+factor
+factor
+
+: IDENTIFIER
+I CONSTANT
+I 'C' expression
+
+')
+
+:
+
+product
+I product
+I factor
+
+'
+
+We will discuss BNF in more detail later.
+Describing the semantics of a language is much harder. If a formalism is
+employed, it essentially simulates execution of a sentence on a more or less well-defined
+theoretical machine model, and the resulting machine states — legitimate or not
+define the meaning of the sentence, or rule the sentence out as meaningless.
+
+jWir82],
+
+We can use plain English to describe the meaning of a sentence or of a part
+thereof. In the absence of a formal notation, simplicity and precision become
+extremely important
+Wirth's Pascal or
+definitions, [Jen75]
+and
+are very good examples, and just about any PL/I
+or Fortran language reference
+manual tends to be verbose to the point of destruction.
+Modula-2
+
+—
+
+There is a tradeoff between syntactic and semantic description of limitations
+imposed on a sentence. Consider, e.g., Basic, where an identifier can be defined as
+:
+
+I
+
+LETTER DIGIT
+LEtikl
+
+id
+
+'$
+
+:
+
+identifier
+id
+I id
+
+LANGUAGE DEFINITION 3
+
+CHAPTER 1
+
+If the operator + is used for addition between numerical values and for concatenation
+between strings, the semantic description must state that + may not be used to "add"
+a string to a numerical value or vice versa.
+Alternatively, we can define
+real_id
+
+LETTER DIGIT
+:
+
+1 LETTER
+string_d
+
+real id
+:
+
+In this fashion we can distinguish string and numerical computations in a purely syntactic fashion throughout the language definition.
+A Basic identifier is certainly a borderline case between what can (and should)
+be specified syntactically, and what can (and should) be specified semantically. In general in defining a language, we should not do in English what can be done (sensibly) in
+a more formal way.
+
+1.2 Mechanical aspects
+
+[
+
+BNF is a formalism to describe the syntax of a language. It was pioneered by
+and has since been used to describe
+Peter Naur in the Algol 60 Report [ Nau63]
+numerous languages. It has also been extended and overloaded, perhaps to a point
+where the resulting description is no longer easily grasped Wij75].
+A grammar, the BNF description of a language, consists of a sequence of rules. A
+rule consists of a left-hand side and a right-hand side, separated by a colon. The lefthand side consists of a single, unique non-terminal symbol'. The right-hand side consists of a sequence of one or more formulations, separated from one another by a bar.
+Each formulation consists of a sequence of zero or more non-terminal and terminal
+symbols. Only one formulation in a rule may be empty; since this can be the only formulation in the rule, the entire right-hand side may be empty. An example of a grammar was shown in section 1.1:
+expression
+
+'/
+
+:
+
+factor
+
+'-
+
+'*
+
+:
+
+product
+I product
+I factor
+
+'+
+
+product
+
+expression
+
+I expression
+I product
+
+product
+product
+
+factor
+factor
+
+:
+
+IDENTIFIER
+I CONSTANT
+I
+expression
+')
+
+'(
+
+1
+
+1Aho7].
+
+We only discuss context-free language definitions in a very informal manner. For a comprehensive
+treatment consult,
+e.g,
+
+4
+
+COMPILER CONSTRUCTION
+
+CHAPTER 1
+
+A grammar defines a language by explaining which sentences may be formed. The
+non-terminal symbol on the left-hand side of the first rule is termed the start symbol.
+Here the start symbol is expression. The first rule lists all possible formulations for
+the start symbol. Each formulation may introduce new non-terminal symbols, such as
+product in this example.
+For each non-terminal, a rule must exist, and any one of the formulations from
+this rule can be substituted for the non-terminal. Substitution continues until a
+sequence of terminal symbols, a sentence, is produced from the start symbol of the
+grammar. The terminal symbols are not further explained in the grammar; they are
+the alphabet in which are written the sentences of the language which the grammar
+describes.
+Once the rules of the grammar involve non-terminal symbols in a recursive
+fashion, infinitely many — and infinitely long — sentences are possible. In our example we have, e.g., the following sentence:
+IDENTFR
+
+by choosing the formulations product for expression, factor for product, and IDENTIFIER for factor. Another example is
+IDENTIFIER * ( CONSTANT + IDENTIFIER )
+
+Here, we must use number of intermediate formulations before we can conclude that
+this is in fact a sentence described by the grammar. It is customary to arrange these
+formulations as a parse tree. The root of this ordered tree is labeled with the start
+symbol of the grammar. The leaves are, in order, labeled with the terminal symbols of
+a sentence. Each non-terminal node is labeled with a non-terminal symbol, and the
+branches from a node lead to nodes which, in order, are labeled with the symbols from
+a formulation of this non-terminal.
+
+BNF is itself a language and can be described in BNF:
+
+LANGUAGE. DEFINITION S
+
+CHAPTER 1
+
+grammar
+
+grammar rule
+:
+
+I rule
+rule
+
+'I' formulation
+NONTERMINAL
+formulation
+1 NONTERMINAL
+':
+
+rale
+
+:
+
+1
+
+:
+
+formulation
+formulation symbol
+1 symbol
+symbol
+NOTERMIAL
+
+:
+
+1 TERMINAL
+
+BNF.
+
+}
+
+This description is slightly more restrictive than the informal definition given above:
+here an empty formulation must be the first one in a rule. (Why?!)
+As the examples show, recursion plays a major role in BNF. Rules are usually
+written in a left-recursive fashion — the non-terminal to be formulated appears again
+at the beginning of one of its own formulations, thus giving rise to an infinitely long
+sequence of like phrases. This technique tends to obscure simple situations, and especially language reference manuals therefore extend BNF with iterative constructs such
+as brackets I and J to enclose optional items and braces { and to enclose items which
+may appear zero or more times. Sometimes parentheses are also employed, to introduce precedence and factor the selection operation (bar) and normal concatenation of
+symbols in a sequence. Extended BNF (or one variant thereof) can be included in our
+We merely need to replace the rule for symbol by the following:
+description of
+symbol
+
+:
+
+NONTERMINAL
+I TERMINAL
+formulation '}
+I
+formulation
+I
+'{
+
+'(
+
+1.
+
+Our grammar for arithmetic expressions can then be modified:
+
+f actor remains as above.
+
+Extended BNF can describe itself:
+
+)
+
+{
+
+factor
+factor
+
+}
+
+'/
+
+{
+
+{
+
+:
+
+'*
+
+factor
+1 factor
+
+'-
+
+'+
+
+{
+
+product
+
+product
+product }
+}
+
+:
+
+expression
+product
+I product
+
+COMPILER
+
+CONSTRUCTION
+
+grammar
+
+CHAPTER 1
+
+rule { rule }
+
+rule
+:
+
+NONTERMINAL
+
+[ formulation ] { 'I' formulation
+
+}
+
+6
+
+}
+
+formulation
+: symbol { symbol
+symbol
+NONTERMINAL
+
+formulation
+
+'].
+
+I
+
+'[
+
+'}
+
+'{
+
+f TERMINAL
+I
+formulation
+
+Our discussion has been quite informal. Still, a word on representation is perhaps
+in order: non-terminal symbols are specified like identifiers in a programming language
+— they consist of letters and possibly digits and underscores; they start with a letter.
+terminal symbols tend to be spelled in upper case; if they are single special characters,
+we enclose them in single quotes. White space (spaces and tabs) is usually
+insignificant, and merely serves to delimit other symbols.
+
+1.3 Convenient grammars
+If we define a language to be a set of sentences, i.e., of sequences of terminal symbols, there are usually many ways to define a grammar describing the language. While
+a language need not be finite, a grammar is by definition required to be finite. This
+restriction alone, however, is not sufficient. Consider the following two grammars
+describing very simple arithmetic expressions:
+expression '-' IDENTIFIER
+
+1
+
+:
+
+expression
+IDENTIFIER
+
+and
+expression
+
+'-
+
+:
+
+IDENTIFIER
+I IDENTIFIER
+
+expression
+
+–.
+
+For both grammars, the language consists of all alternating sequences of IDENTIFIER
+and
+There is an important difference, which we can see if we compare the parse
+trees for an expression:
+
+LANIM
+
+TAGE
+
+CHAPTER 1
+
+DEFINITION 7
+
+The left-recursive grammar collects terminal symbols beginning on the left; the
+grammar builds (in this case) a mirror image of the first parse tree:
+riO)t-ecusv
+
+In the context of arithmetic expressions, the parse tree is interpreted to also
+describe precedence and associativity of operators, i.e., to define the order in which the
+terms of an arithmetic expression need to be combined for evaluation. This example
+introduces only one operator and there is therefore no precedence problem. Depending
+on the grammar, however, we would introduce different ways to implicitly
+parenthesize: the left-recursive grammar implies that the operator – is left-associative,
+i.e., is implicitly parenthesized from the left, and the right-recursive grammar implies
+the insertion of parentheses from the right. Most operators are left-associative and
+must therefore be introduced using left recursion.
+Unfortunately, this is not the only problem. Consider the following proposal for a
+grammar, still for the same language of arithmetic expressions:
+'-
+
+:
+
+expression
+expression
+I IDENTIFIER
+
+expression
+
+With this rule, we can build either parse tree shown above. The grammar is
+therefore called ambiguous: there exists a sentence in the language for which two
+different parse trees may be built. Ambiguity is often a property of the grammar, not
+usually of the language. As the previous examples indicate, there exist non-ambiguous
+grammars for the same language. We can make the proposal unambiguous by insisting
+that the parse tree must be built up starting on the left — this condition is known as a
+
+disambiguating rule'.
+
+ut!
+
+As a first task, a compiler must recognize the language it is to translate, i.e., for
+every sequence of terminal symbols, it must be able to determine efficiently whether or
+not it is a sentence of the language. The problem can be dealt with by attempting to
+build a parse tree. If we have an unambiguous grammar for the language, we can
+begin with its start symbol, try each formulation in turn, substitute for each nonterminal, and attempt to arrive at a parse tree for a proposed sentence. In an organized fashion, this amounts to backtracking and is thus inherently inefficient. Additionally, if the compiler produces output while it constructs the parse tree, backtracking
+cannot even be readily accomplished, since it would involve undoing some of the outp
+for language recognition must not only be unambiguous, it
+A convenient graim
+must be deterministic: the as yet unused rest of the input, i.e., the tail of the sequence
+
+8 COMPILER CONSTRUCTION
+
+CHAPTER
+
+1
+
+of terminal symbols proposed as a sentence, together with the partially constructed
+parse tree, must enable us to uniquely decide which rule and formulation to use in
+order to complete the parse tree if it exists, or to discover that no tree can be constructed to accommodate the next input symbol.
+Different notions of convenience exist, depending largely on the ingenuity of the
+compiler writer and the power of his tools. A simple sufficient condition is, for example, that each formulation start in a unique terminal symbol. In this case the next,
+single input symbol determines what needs to be done.
+The grammars for modern programming languages tend to follow a less restrictive
+pattern: they usually possess the
+or LR(1) property, or variants thereof. In the
+first case, a parse tree can be built top-down without backtracking; in the second case,
+the parse tree can be built bottom-up without backtracking using certain tables, for
+which construction programs exist. In each case we only need to know the next input
+symbol at all times, i.e., we require one symbol lok-ahed.
+The LL(1) property is simply this: whenever there is a question as to which rule or
+which formulation to use, the next input symbol must enable us to uniquely decide
+what to do. The question arises when we need to choose one of several formulations in
+a rule. If none of the formulations is empty, each starts either in a terminal or in a
+symbol. The next input symbol can be one of these terminal symbols;
+alternatively, considering recursively all the formulations for all the (first) non-terminal
+symbols, we arrive at more terminal symbols at the beginning of formulations. The
+next input symbol must be exactly one of these terminal symbols, which therefore
+must all be different. If there is an empty formulation, we need to additionally consider the initial terminal symbols of all the formulations for non-terminal symbols
+which can follow in the present situation.
+Deciding the
+property is not really difficult, since it can be phrased in terms
+of relations such as a terminal symbol starts a formulation for a non-terminal symbol
+and two symbols follow each other in a formulation. Such relations can be expressed as
+Boolean matrices [Grind, and more complicated relations can be composed and computed. Using the LL(1) property is even easier: once a grammar is LL(1), a recursive
+recognizes for its language can be built in a very straightforward manner; see
+Even if a grammar is definitely not LL(1), certain semantic tricks can be used to
+make language recognition deterministic. Consider a simplified excerpt for Pascal:
+Wir7]. [
+
+L(1)
+
+nostermMal
+
+L(1)
+
+statement
+
+':=
+
+: IDENTIFIER
+I IDENTIFIER
+
+expression
+
+The first formulation describes an assignment, the second one a procedure call. Both
+versions of IDENTIFIER being equal, a name as next input symbol would not decide
+which formulation is to be used. The problem is usually circumvented by recognizing
+that only a procedure IDENTIFIER can start a procedure call; such an IDENTIFIER can,
+however, not start an assignment. Since in Pascal names need to be declared before
+they can be used, we can solve our syntactic problem with a semantic trick.
+
+LANGUAGE DEFINITION 9
+
+CHAPTER 1
+
+1.4 Checking a grammar
+A compiler must decide whether or not a sequence of terminal symbols is a sentence of a language. A grammar describes a language. A natural question is whether
+e can use a grammar more or less directly in the recognition process.
+w
+First of all, however, the grammar should be checked: there must be rules for all
+non-terminals, all non-terminals must be reachable from the start symbol, and the
+so that it is suitable for recognition
+rammar should satisfy a property such as
+g
+and not ambiguous.
+Johnson's yacc, a powerful utility in the UNIX system [John], can be used to
+check a grammar in this fashion. yacc accepts a grammar specified in BNF and (for
+the present discussion) will indicate any problems which make the grammar unsuitable
+for language recognition. As an example, we prepare the following input file grammar:
+
+L(1)
+
+first example of a yacc grammar
+*/
+
+%token IDENTIFIER
+
+expression
+I IDENTIFIER
+'-
+
+expression
+
+IDENTIFIER
+
+and test it with the command
+yacc grammar
+the grammar is acceptable according to
+Nothing happens, and this is as it should be
+which
+will be discussed in chapter 3.
+file
+Actually, there will be a new
+yac.
+As the example shows, input to yacc uses the representation for BNF discussed
+requires
+earlier. Since terminal symbols and non-terminal symbols look alike,
+that the terminal symbols be defined using %token specifications prior to the actual
+grammar. A line containing %% must separate the two parts of the input filet. White
+space and C-style comments are ignored.
+checks a grammar. (The comOn a more technical level, let us look at how
+or in
+putational aspects of this are discussed by Horning in chapter 2.C. in [Bau76]
+[Aho74].)
+yacc has what amounts to an option for debugging a grammar; if we issue
+the command
+—
+
+y.tabc,
+
+yac
+
+yac
+
+yacc -v grammar
+we obtain the following file y.output:
+
+state 0
+
+$accept : _expression tend
+
+iJoh781.
+
+2 We will introduce the relevant aspects of the input language for pe
+ence, the reader is referred to
+
+as we go along. As a refer-
+
+10 COMPILER CONSTRUCTION
+
+CHAPTER 1
+
+IDENTIFIER shift 2
+error
+expression goto 1
+state 1
+$accept : expression Send
+expression : expression- IDENTIFIER
+Send accept
+- shift 3
+• error
+state 2
+expression : IDENTIFIER
+
+(2)
+
+. reduce 2
+state 3
+expression : expression
+
+-
+
+IDENTIFIER
+
+.
+
+IDENTIFIER shift 4
+error
+
+state 4
+expression : expression - IDENTIFIER
+
+(1)
+
+.
+
+reduce 1
+
+4/127 terminals, 1/175
+3/350 grammar rules,
+states
+0 shift/reduce, 0 reduce/reduce conflicts reported
+3/225 working sets used
+memory:
+26/4500, parser 0/3500
+3/400 distinct lookahead sets
+0 extra closures
+3 shift entries, 1 exceptions
+1 goto entries
+0 entries saved by
+default
+Optimizer space used: input 9/4500, output 4/3500
+4 table entries, 0 zero
+maximum spread: 257, maximum offset: 257
+notermials
+
+stae,c.
+
+5/0
+
+got
+
+We show the entire
+file here, but only the first few lines of each state are of
+interest now. A more complete explanation of
+will be provided in section 3.1.
+yacc adds the rule
+
+y.outp
+
+y.outp
+
+exprsion
+
+$accept :
+
+$end
+
+to the grammar and places its position marker, indicated by an underscore in the
+rule, just before the start symbol, i.e., expression in this case. This is termed state
+0. yacc then tries to move the position marker across the start symbol.
+
+LANGUAGE DEFINITION 11
+
+CHAPTER 1
+
+Whenever the position marker is located before a non-terminal, the position
+marker is placed before all of its formulations in parallel. A state is a set of formulaposition marked, which is derived in this fashion. A formulation together
+ti
+woitnhs with
+the position mark is called a configuration.
+A new state is computed as follows: for each configuration in the old state in turn,
+the position marker is moved across the next symbol. Within the old state, this is
+done for all configurations with the same next symbol in parallel. For each possible
+symbol, we thus reach a new set of configurations, termed a new state.
+
+As described above, if the position marker in a configuration precedes a nonterminal symbol, all formulations for that symbol must be added to the state, with the
+position marker at the beginning of each new formulation.
+The procedure must terminate, since there is by definition a finite number of rules
+and non-terminals, of formulations, and of terminals in a grammar, and since the formulations must be of finite length. The set of states is thus finite.
+Since the position
+In the example, state 0 is constructed implicitly by yac.
+precedes
+the
+non-terminal
+expression,
+we
+must
+add
+all
+formulations
+for it
+marker
+with the position marker at the beginning of each formulation:
+expression : _expression - IDENTIFIER
+expression : _IDENTIFIER
+algosince it is obvious from the point of view of the
+This is omitted in
+rithm.
+In the state, the position marker precedes expression and IDENTIFIER. Moving it
+across expression in all possible configurations, we obtain state 1; moving it across
+IDENTIFIER, we obtain state 2. In neither state the position marker precedes a nonterminal, and no new configurations result. State 2 only contains a complete
+configuration, where the position marker has reached the end of a formulation.
+In state 1 we can move the position marker across the fictitious Send symbol
+added by yacc, and across the terminal symbol in the other configuration. The
+former operation is essentially ignored; the latter produces state 3.
+Again, state 3 cannot be extended, and we can only move the position marker
+across IDENTIFIER to reach state 4. This is the last possible state, since its only
+configuration is complete.
+The algorithm just described is, of course, the simulation of using all parts of the
+grammar for input recognition. Moving the position marker across a terminal, a shift
+action, means to accept the terminal at a certain position in an input sequence; moving
+across a non-terminal symbol implies that a formulation for the non-terminal symbol
+has been completed elsewhere in the simulation. (This is discussed in more detail in
+chapter 3.)
+
+yac
+
+y.outp,
+
+—
+
+The comments following the configurations in each state in y.output outline what
+actions would be taken during recognition for each possible input symbol. A period
+stands for any other symbol and reduce indicates the fact that a complete
+configuration, i.e., a certain formulation, would be used to collect a number of accepted
+symbols and to replace them by the appropriate non-terminal. reduce is accompanied
+by the number of the formulation to be used. shift indicates the next state which will
+
+12
+
+COMPILER CONSTRUCTION
+
+CHAPTER 1
+
+be entered upon accepting the respective symbol.
+1.5 Common pitfalls
+
+It looks like nothing can go wrong in this analysis, but this is not the case. Forgetting to define terminal symbols, forgetting to define a rule for a non-terminal, or
+adding non-terminals and rules inaccessible from the start symbol are obvious errors,
+which yacc will discover and report immediately.
+Problems with the grammar are more subtle and need individual attention. Consider the following excerpt dealing with the usual if statement:
+/*
+dangling else
+
+*/
+
+IF.THEN
+
+%token
+%token ELSE
+%
+
+statement
+•
+
+/* empty */
+I IF...THEN statement
+.
+
+0.■
+
+I IF...THEN statement ELSE statement
+
+conflict and if we look at y.output, we
+shift/reduc
+
+yacc will complain about a
+find the following:
+
+4: shift/reduce conflict (shift 6, red's 2) on ELSE
+
+state 4
+
+statement : IF...THEN statement
+(2)
+statement : IF...THEN statement ELSE statement
+ELSE shift 6
+reduce 2
+.
+
+state 6
+
+statement : IF.THEN
+
+statement ELSE statement
+
+IF...THEN shift 3
+shift 2
+error
+.
+
+statement goto 6
+
+The problem is quite common. It concerns the question to which if the else
+belongs in the following program fragment:
+
+/*
+
+if (condition)
+if (condition)
+else
+
+empty statement */
+
+LANGUAGE DEFINITION 13
+
+CHAPTER 1
+
+In terms of pace, in state 4 we could still accept (shift) the terminal symbol ELSE
+nd
+move
+on in the second configuration, or we could consider the first, complete
+a
+configuration and substitute the non-terminal (reduce) statement. Shifting means to
+extend the innermost if statement, i.e., to connect each else to the innermost if, and
+this is what languages like C and Pascal require.
+conflict, a mistake in the proposed
+Technically, state 4 exhibits a shift/reduc
+grammar, which makes it ambiguous and thus unsuitable for language recognition.
+yacc, however, intentionally permits such conflicts, and (as the comments indicate) it
+will provide for the longest possible input sequence, i.e., it will do just what is normally
+required.
+The next problem is more serious. The setting is an excerpt from a Basic dialect,
+where the result of a comparison can be assigned to a variable or used in a decision:
+/*
+
+multiple clauses
+*/
+
+%
+
+%token IDENTIFIER, IF, THEN, SUM
+
+'=
+
+statement
+expression
+: IDENTIFIER
+I IF condition THEN statement
+condition
+
+expression
+SUM
+
+:
+
+'<
+
+I SUM
+
+:
+
+'<
+
+expression
+SUM
+I SUM
+
+SUM
+
+yac
+
+will note a reduce/reduce conflict, and investigation of y.output reveals the
+
+following:
+state 14
+condition : SUM < SUM_
+expression : SUM < SUM_
+
+(4)
+(6)
+
+. reduce 4
+
+shift/reduc
+
+State 14 contains more than one complete configuration. In this case, pace would
+use the formulation introduced first in the grammar, but this tends to be risky if the
+grammar is later modified or rearranged. While we usually tolerate
+conflicts such as the dangling else problem, we always attempt to rewrite the
+to eliminate formulation combinations which provoke reduce/reduce conflicts. In
+the present case this is easy
+admittedly, the example is too simple to be realistic:
+gram-
+
+mar
+
+—
+
+/*
+*/
+
+multiple clauses, no conflicts
+
+14
+
+CHAPTER 1
+
+COMPILER CONSTRUCTION
+%token IDENTIFIER, IF, THEN, SUM
+%
+
+statement
+
+:
+
+expression
+IDENTIFIER
+I IF expression THEN statement
+'=
+
+expression
+
+'<
+
+SUM
+
+SUM
+
+vice has a very permissive syntax for its own input. For typographical reasons,
+
+we have even omitted the semicolon which may follow each rule. The inadvertent
+addition of an empty formulation can provoke a rather startling number of conflicts!
+Another ambiguity problem is, in fact, a virtue. Consider the following grammar
+for arithmetic expressions:
+
+While the description is short and devoid of extraneous non-terminal symbols, it does
+not convey any notions of precedence and associativity of the operators. yacc permits
+such a situation, as long as precedence and associativity are specified explicitly in the
+first part of the input file as follows:
+%token IDENTIFIER
+7
+it
+
+P
+
+4,•
+
++P
+
+1
+
+%left
+%left
+
+left defines a list of terminal symbols to be left-associative and to have equal precedence among each other. Precedence then increases in the order of appearance of
+successive left, right, and nonassoc lines in the input file. right, of course, indicates
+right-associativity, and nonassoc lists terminal symbols of equal precedence and does
+not permit them to associate with themselves.
+This variety of ambiguity and explicit disambiguating rules is preferred — it
+introduces fewer non-terminals and thus streamlines a grammar.
+
+1.6 Example
+
+sampleC,
+
+This book will show a complete compiler for
+a. rudimentary subset of C.
+The various modules for this compiler will be described in an "example" section near
+the end of each chapter.
+Here is our informal definition of sampieC
+in extended
+where we enclose terminal symbols composed from special characters in quotes and specify reserved words
+in capital letters. Identifier and Constant are additional terminal symbols; unlike
+BNT,
+
+CHAPTER 1
+
+LANGUAGE DEFINITION 15
+
+the others, they stand for classes of words and not for themselves. The definition is
+verbose to simplify extensions left as exercises.
+,i1-htv
+
+16 COMPILER CONSTRUCTION
+
+CHAPTER I
+
+sampleC
+
+are those of C, suitably pruned. The language has only
+The semantics of
+an int data type, functions with a variable and arbitrary number of parameters and
+with int result, global, function-local and block-local scalar variables, and the control
+structures if-else and while. A number of the C operators are supported. Only one
+function must be present. This last confile will be compiled at a time, and a
+dition will have to be explicitly accounted for; see chapter 5.
+The informal definition above was translated into BNF. This involved mostly elaborating the repetitive constructs using recursion. A list of %token definitions and
+ne
+ha.r1
+to he ade
+The
+result. is
+to 12.•*
+main()
+
+relationsh
+
+apront.hi
+
+epdn
+
+pre-
+
+folwinr
+
+CHAPTER 1
+
+LANGUAGE DEFINITION
+
+17
+
+CHAPTER
+
+1,*Pw-
+
+CHAPTER
+
+LANGUAGE DEFINITION 19
+
+1
+
+expression
+
+')
+
+*('
+
+:
+
+WHILE
+
+1.7 A note on typography
+As we remarked before, yacc input is almost entirely free format, but certain conventions are helpful:
+Each nonterminal should appear just once on the left hand side of a rule. We
+place the nonterminal alone on a line, at the left margin. All formulations are
+then listed together.
+The colon between left-hand and right-hand side of a rule is indented one tab
+position, the first formulation is indented one blank past the colon, and actions —
+to be discussed in chapter 3 -- will be indented two tab positions.
+
+CHAPTER 1
+
+20 COMPILER CONSTRUCTION
+
+The colon, the 1 symbol introducing an alternative formulation, and the semicolon
+terminating the rule are all vertically aligned.
+In order to conserve space in the book, we do not terminate a rule by a semicolon.
+it is, however, a bad idea in practice to omit the
+While this is acceptable to
+semicolon, since omitting it tends to obscure typographical errors such as replacing a colon by a bar.
+
+yarc,
+
+Rules are separated from one another by a blank line.
+Empty formulations are clearly indicated by a suitable comment — this is particularly helpful for debugging.
+We prefer long names, joined together by underscores; periods are also acceptable
+for this purpose. We also tend to use the suffix _list to indicate a commaseparated list of things, and plural to indicate a sequence of things.
+1.8 Problems
+
+BNF
+
+description of it. Add token
+1. Design a. small subset of Pascal, and write a
+definitions and precedence relations to the BNF description. Submit this language
+definition to yacc, and correct it if necessary until is acceptable to yacc (i.e., until yacc
+does not issue any error messages other than unavoidable shift/reduce conflicts).
+by adding another standard feature of C, such as
+2. Extend the definition of sampleC
+arrays. Change the grammar given in section 1.6 so that the new description of sarnple
+is acceptable to yacc.
+3. Write a grammar for EBNF in BNF. A grammar for EBNF in EBNF can be found
+in section 1.2. What changes must be made to convert this grammar to BNF? Add
+token definitions and whatever else is needed to make the resulting grammar acceptable to yacc. Hint: to remove all shift/reduce conflicts, you will want to include a
+semicolon to terminate each rule.
+
+Chapter 2
+Word Recognition
+
+rc
+
+linafsg
+
+2.1 Purpose
+We have seen in the previous chapter that a language is a set of sentences, which
+turn are sequencesof terminal symbols. Terminal symbols in a programming
+language usually come in three varieties: operators are represented as (short) sequences
+l characters, reserved words are represented as predefined sequences of letters
+o
+tpuea
+w h ose m eaning cannot vary, and user-defined terminal symbols encompass constants
+and identifiers subject to a specialized syntax definition. Then, of course, there is
+blanks, tab characters and line separators — which in most modern
+white space
+programming languages merely separates terminal symbols but is otherwise
+insignificant. Comments, too, follow their own syntax, different for just about every
+and just as insignificant as white space.
+programming language [
+
+—
+
+Wic73]
+
+This chapter deals with lexical analysis, that phase of the compilation process
+which assembles terminal symbols from the unstructured sequence of input characters
+presented to the compiler. White space and comments are usually ignored, while
+operators and reserved words are identified and passed on using an internal representation — typically small integer constants. User-defined constants and identifiers need
+to be saved in an appropriate table, and a generic representation such as Identifier
+or Constant together with a reference to the table entry passed on.
+We could attempt to solve the lexical analysis problem simultaneously with the
+actual language definition in the following manner:
+statement
+"F
+
+condition T
+
+H E N statement
+
+"1
+
+The resulting grammar, however, is bound to be loaded with conflicts and the technique is horribly inefficient.
+Lexical analysis accounts for a large amount of the processing which a real compiler does. By dealing with lexical analysis mostly independently from the rest of the
+compilation process, we can employ more appropriate techniques and can at the same
+ti me hide within a single module all knowledge about the actual representation of our
+programming language in a real world character set.
+Definto
+
+2.2
+
+tools
+
+Gstyle
+
+How do we assemble characters into terminal symbols? Lexical analysis is the
+classical application for the theory of finite state automata. A transition diagram is
+generally easy to devise from the lexical specification of a programming language, and
+an eight to sixteen hour ad-hack approach loosely based on the transition diagram will
+cope with just about any such specification. Things usually get messy when we need to
+dispose of strings, comments, and (floating-point) constants, in about that order. By
+way of illustration let us consider a
+comment described as a transition
+diagra m:
+
+22
+
+CHAPTER 2
+
+COMPILER CONSTRUCTION
+
+operator
+'/
+
+comment has
+been collected
+
+In a transition diagram, the states are the numbered nodes, and the transitions
+are the branches between the states, labeled with the input characters causing the
+transition. Characteristically, the exit from the diagram with the collected terminal
+symbol is somewhat haphazard — sometimes the following character has already been
+seen, and sometimes it has not.
+A transition diagram corresponds quite closely to a syntax graph. The branches in
+the transition diagram describe the transitions; the nodes in the syntax graph contain
+the symbols which need to be found in order to move on. The difference is that syntax
+graphs regularly call one another, while these simple transition diagrams are not supposed to.
+
+lex
+
+A comparison of the two types of diagrams suggests why transition diagrams are
+preferred in this approach to lexical analysis. The approach itself, however, is error
+prone, and the result tends to be quite hard to modify.
+A better solution for the problem of lexical analysis can be derived directly from
+the theory: we need a convenient way to describe the finite state automaton
+corresponding to the lexical specification of our language, we need a compiler to produce appropriate tables from the description, and we need an interpreter to simulate
+the finite state automaton defined by the tables.
+[Les78b1.
+lex accepts a
+Such a compiler has, in fact, been written: it is called
+and
+produces
+a
+table-driven
+C program
+table of patterns resembling editor paternsl
+
+ed(1)
+
+in
+
+Ver78a1,
+
+I See
+
+WORD RECOGNITION 23
+
+CHAPTER 2
+
+capable of recognizing input strings satisfying the patterns. As the substitute command in the editor shows, patterns can be conveniently used to identify specific character sequences.
+Patterns are a very convenient specification language for the finite state automaton actually constructed. With each pattern a C statement can be associated which
+will be executed when a string satisfying the pattern is found in the input. In simple
+translation applications the C statement will usually write a modified copy of the
+string to standard output; in compiler applications the C statement should return an
+appropriate encoding of the string to the caller of the lexical analysis function.
+As we shall see, lex is a very powerful tool in its own right, and it can be used to
+great advantage in language recognition. However, lex is, in our opinion, quite
+unfriendly to use: error messages are short and entirely unspecific, commenting input
+for /ex is cumbersome at best, and brute force uses of lex can create huge programs.
+hand-coding the lexical analysis
+Still, lex is the tool of choice, since the alternative
+function — requires a significantly higher investment in manpower.
+The rest of this chapter will introduce in reasonable detail a sufficient number of
+lex features to cope with most compiler applications. We will first describe the most
+frequently used operations in patterns, how patterns are specified to lex, and how typical language constructs such as identifiers, strings, and comments can be specified as
+patterns. While we explain most possibilities, the chapter is not intended as a
+comprehensive description.
+—
+
+In section 2.5 we introduce lex as a program generator and we show a few small
+but complete
+programs for file inclusion, file splitting, and word counting. Our
+implementation is continued in section 2.7 where the complete lexical
+analyzer for
+is presented.
+lex
+
+sampleC
+
+sampleC
+
+2.3 Patterns
+Users of ed and similar text editors are already familiar with the following constituents of patterns:
+Letters, digits, and some special characters represent themselves.
+Period represents any character, with the exception of line feed.
+
+-.
+
+Brackets, [ and 1, enclose a sequence of characters, which is termed a character
+class. The class represents any one of its constituents, or any single character not
+in the given sequence if the sequence starts with Within the sequence, —
+between two characters denotes the inclusive range.
+If * follows one of these pattern parts, it indicates that the corresponding input
+may appear arbitrarily often, or even not at all.
+at the beginning of a pattern represents the beginning of an input line.
+
+conveti
+
+W
+
+el
+
+$ at the end of a pattern represents the end of an input line (but not the line feed
+char acter itself).
+h
+With caaps euictoanb vleenetsicoape
+for special characters and white space, we can
+nps in
+
+are t wo
+
+write patterns for most terminal symbols of a programming language. There
+
+24
+
+COMPILER CONSTRUCTION
+
+CHAPTER 2
+
+\ quotes a single following special character; in particular, two \ characters
+represent a single \. 1 may precede the letters b, n, and t; the combinations then
+denote backspace, line feed, and tab characters, just as in C.
+A better technique, especially for sequences of characters, is to enclose one or more
+characters in double-quotes. The characters thus lose their special meaning.
+Most special characters have a special meaning in lex; if a special character should
+represent itself, it is best quoted. Special characters need not be quoted inside a character class. White space must always be quoted or represented by a \ escape sequence.
+just as in C.
+A double-quote can be introduced within double-quotes with \",
+By way of example, let us look at patterns for some terminal symbols in sample C.
+The operators are simply quoted — we generally prefer double-quotes to the backslash
+convention:
+■*.
+*=•
+
+•
+
+and so on. We need a pattern to recognize white space:
+\t\n]
+
+Constants consist of one or more digits:
+[0-9]*
+
+[0-9]
+
+Identifiers follow the rules of C, i.e., they start in a letter or underscore and continue
+with arbitrarily many letters, digits, or underscores:
+][A-Zaz09
+
+[A-Zaz
+
+]*
+
+The following pattern attempts to deal with single-line comments:
+/*•.,
+
+•
+
+/*
+
+and terminate with the first occurrence of */. It can
+A comment should start in
+extend over many lines.
+The last two patterns exhibit certain limitations with which casual users of
+should be quite familiar: a pattern, by definition, represents the longest possible input
+sequence. In the case of constants and identifiers, this is really what is desired; in the
+case of comments, however, we need exactly the opposite! There is also a question as
+to what happens if we specify
+8<
+
+ed
+
+1/
+
+I
+
+<=
+
+i.e., two patterns which represent the same initial sequence of characters, or
+int•
+
+[a-z]
+[a-z]*
+
+•
+
+i.e., two patterns where one represents a subset of the possibilities of the other. We
+will deal with ambiguities in the next section.
+In order to deal successfully with C- and Pascal-style comments and strings, we
+need to introduce a few more lex pattern features. Just as for egrep 2 parentheses may
+2
+
+See grep(1)
+
+in IKer78a).
+
+WORD RECOGNITION 25
+
+CHAPTER 2
+
+grouping within a pattern, I denotes alternatives, + denotes one or more
+of the item preceding it, and ? denotes zero or one occurrence. The last
+esr
+eedn cf o
+ob cec uursfre
+t w o a tu r es simplify some of the patterns shown earlier, e.g., integer constants are
+recognized with
+[0-91+
+A terminal symbol which is delimited by single characters, such as a Pascal-style
+comment enclosed in braces, is easy to handle:
+•
+
+-
+
+)1*■•
+
+{■[
+
+Using an alternative, the technique extends easily to Pascal- or C-style strings,
+where the delimiter must be duplicated or escaped if it is to appear within the string:
+1\'\')+\
+
+•
+
+\
+
+n
+
+m[l\
+
+]
+n
+
+\. *
+
+])
+
+• a-•\
+
+*/,
+
+Note that a Pascal-style string as defined here cannot extend over several lines, and
+that it must contain at least one character. A C string can extend over several lines if
+the line feed is escaped using \, it can contain escaped double-quotes, and it can be
+empty.
+If there is a sequence of characters used as a delimiter, as in C-style comments
+or in Pascal-style comments enclosed by (* and *), the necesand
+enclosed by
+sary pattern becomes quite complicated. The basic idea is not to permit the terminating delimiter once the opening delimiter has been recognized; unfortunately, this can
+only be done by enumeration. Consider the following proposal for a pattern to recognize a C-style comment:
+*/]1[
+
+*]•/°1
+
+2
+
+-
+
+/])*•'
+
+6
+
+-
+
+-
+
+*'[
+
+/*
+
+/*'([
+
+/,
+
+*/.
+
+The comment begins with /* and ends with
+In between can be zero or more
+occurrences of one of three alternatives, namely any character but * or a / preceded
+by any character except *, or finally a followed by any character other then
+Note
+that a character class using the complement operator is somewhat dangerous it
+usually includes line feed and thus can easily swallow an entire input file!
+Alas, our 'solution' for C-style
+comments is not quite perfect: /*/ is not recognized
+as the beginning of a comment, since in this pattern, / must follow a character in the
+comment, and /***/ is not recognized as a complete comment, since in this pattern *
+must precede another character in the comment, which causes the third * to be
+ignored as part of the delimiter. A better solution is the following pattern, which
+admittedly is even harder to read:
+/.
+
+*
+
+-
+
+/])*"•
+
+-
+
+*]•/I1[ -
+
+-
+
+*/31[
+
+•
+/*•(1
+
+Now zero or more slashes may immediately follow the opening delimiter, and zero or
+more asterisks may precede the closing delimiter. Thus the special cases are also
+accounted for.
+
+la-z][o93{0.7)
+
+There is yet more to lex patterns. Iteration can be limited to a specific range
+using a notation like
+
+26
+
+COMPILER CONSTRUCTION
+
+2
+
+CHAPTER
+
+to denote an identifier starting in a lower case letter, which is followed by zero to seven
+letters or digits. A pattern may be recognized only before a certain right context,
+which itself is not represented by the pattern; the right context is given following a /
+mark:
+-0 [ix]
+
+/ [0-9af]
+
++
+
+[Les78b].
+
+would recognize the sign and the base prefix of a negative hexadecimal C constant, but
+would not include the digits of the constant itself. Patterns can be preceded by start
+conditions, which essentially permit the dynamic selection of one of several sets of patterns specified together. Finally, a very able (and careful) programmer can even
+interact directly with the input, output, and buffer managing routines employed by the
+automaton generated by lex.
+The patient and imaginative reader is cheerfully referred
+to the original publication
+2.4 Ambiguity as a virtue
+
+lex
+
+A set of
+patterns tends to be highly ambiguous. Two rules are employed by
+lex to sort things out:
+
+lex always chooses that pattern which represents the longest possible input string.
+If two patterns represent the same string, the first pattern in the list presented to
+is chosen.
+
+lex
+
+Both rules are, in fact, assets rather than liabilities. The first rule asserts that the
+patterns
+int
+[a-z]
+
++
+
+int
+
+completely recognize integer (as an instance of the second pattern) and not only the
+initial int. The second rule causes the pattern
+and not the second, more general
+pattern to recognize
+from the input.
+int
+
+e.g,
+
+As has been demonstrated in the previous section, the first disambiguating rule
+can backfire if used carelessly. The second rule, however, encourages an arrangement
+in which the most general pattern,
+for an identifier, is placed last, with more selective patterns preceding it to pick off exceptions.
+
+1Les78a],
+
+ms
+
+Consider the following recognition problem: when typing German texts on an
+American keyboard, umlaut characters are most quickly typed as ae, oe, ue, etc.
+Before the resulting document is presented to nroff or trot to be processed, e.g., with
+the
+macro package
+one should replace all these letter combinations by
+invocations of the ms string \*:,
+as for example in
+a, \*:o, etc. The pattern
+\*:
+
+ue
+Quel
+
+however, recognizes the letter combination ue even in contexts such as
+( German: fountain), or eventuell (German: possibly), where it does not represent the
+umlaut. We therefore need to pick off these special cases before we present the general
+combination:
+[Gig]
+ntue
+
+ue
+
+ue
+
+WORD RECOGNITION 27
+
+2
+
+reduc/
+
+we can simply insert more
+Since am biguous pattern lists are acceptable as input to lex,
+pecial cases as we encounter them.
+s
+conflicts does input order
+in yacc, where only in the case of
+nl
+makeU a
+are frely
+matters
+in
+since
+conflicts
+in
+the sense of
+idce difference, it great
+quently encountered. This, unfortunately, often leads to illogical arrangements of the
+patterns. The order of patterns does imply something like a control structure.
+fe
+
+yac
+
+lex
+
+lex
+
+2.5 "lex" programs
+consists of one file with three parts, separated by lines beginning in
+Input to
+first part
+
+action
+
+pattern
+- • •
+
+third part
+
+%(
+
+The first part is optional; it can contain lines controlling the dimensions of certain
+it can contain definitions for text replacements as we shall see in
+tables internal to lex,
+and
+section 2.7, and it can contain (global) C code preceded by a line beginning in
+specification
+is
+Even
+if
+the
+first
+part
+of
+the
+x
+e
+l
+followed by a line beginning in
+specification canempty, the separator %% between the first and second parts of the
+not be omitted.
+The third part and the separator preceding it are optional. The third part contains C code which is used as is. As we shall see, it usually contains (local) functions
+which the second part uses.
+The second part of the specification consists of a table of patterns and actions.
+A pattern starts at the beginning
+This part of the specification is quite
+of a line and extends to the first non-escaped white space. Following an arbitrary
+amount of white space, an action is specified which is thus associated with the pattern.
+The action is a single C statement, or several statements enclosed in a set of braces.
+The action may also consist of a bar I, indicating that the present pattern will use the
+same action as the next pattern.
+lex
+input itself has no provisions for comments(!), but within braces, regular C
+comments can be written.
+%}.
+
+lex
+
+line-ortd.
+
+ylex()
+
+From the table,
+in the file lex.yc
+. If this
+will construct a C function
+function is linked with a program and called, standard input is read until the next,
+longest possible string represented by a pattern has been collected. The action associated with the pattern is then executed. If this action contains a return statement,
+ylex()
+will return, possibly with a. function value as dictated by the return statement.
+
+lex
+
+cHAPTER
+
+fez adds a default pattern and action to the patterns specified by the user in such
+a way that all otherwise unrecognized input characters are copied to standard output.
+
+28
+
+COMPILER CONSTRUCTION
+
+program will remove all upper case letters from its input:
+
+lex
+
+The following
+%{
+
+/*
+
+CHAPTER 2
+
+%}
+
+*/
+
+remove upper case letters
+
+(A-2)+
+
+%
+
+the following commands pro-
+
+exu:
+
+Assuming that the program is contained in a file exitd,
+duce an executable program
+lex exmc.1
+cc
+
+lex.yc
+
+-11 -0 eras
+
+lex
+
+library, which contains a default main() function, which will
+-11 references the
+once. This library must always be supplied when a function
+just call
+generated by
+is to be linked.
+More useful actions need to have access to the input string recognized by the pattern with which they are associated. The char vector yytext t] contains this string,
+null-terminated, the int variable yleng
+has strlen(yx)
+as a value, and the int
+variable
+contains the number of the current input line. Let us look at a few
+marginally useful programs:
+lex
+
+ylex()
+
+ylex()
+
+ylineo
+
+/*
+*/
+
+line numbering
+
+%
+ECHO;
+
+yytext);
+ylineo,
+
+printf(qA%s,
+
+-.*$
+
+This first program prints standard input and precedes each nonempty input line
+by its number and a tab character. ECHO is defined within the C program produced by
+it causes yytext t] to be printed.
+If we also want to number the empty lines, the following program can be used:
+9‘{
+lex;
+
+/*
+line numbering
+*/
+%
+
+print(16A%s•,
+
+ylineo-t,
+
+ytex);
+
+Now we recognize line feed as part of the pattern. ylineo
+the next line when our action gets control.
+
+is already incremented to
+
+WORD RECOGNITION 29
+
+CHAPTER 2
+
+lex
+
+This example shows a use for the third part of a
+specification: we include our own
+main() function, which here prints the statistics gathered during execution of the
+function.
+The next example is typical of a large class of problems, where a special action —
+here it is file inclusion — needs to be taken when just one pattern is recognized. Most
+of the input is just passed through. Similar applications include, e.g., adorning
+reserved words for the publication of a program, gathering a table of contents, etc.
+
+yiex()
+
+30
+
+COMPILER CONSTRUCTION
+
+CHAPTER 2
+
+++ s;
+(s,
+while (0. = getc(fp))
+I
+
+1=
+
+)
+
+"r
+
+M
+
+fopen
+
+if (fp
+
+;
+
+f close (fp)
+
+EOF)
+
+;
+
+output (1)
+
+else
+
+porCE);
+
+output() is the routine which lex uses to write all output. The program can only handle one level of file inclusion.
+The last example deals with depositing output in several files, selected by options
+in the input. This is a variant of the split utility.
+%{
+
+I*
+
+.di filename
+
+file splitting
+
+*/
+
+#include <ctype.h>
+#include <stdio.h>
+static divert();
+
+%
+
+%}
+-6
+
+{
+
+%
+
+}
+
+.di*\n
+
+= 'W; divert(yx+3);
+ytexlng-i
+
+static divert(s)
+char * s;
+
+&
+
+(*s))
+
+freopn(s,
+
+•wm,
+
+if (!
+
+s;
+
+ispace
+
+while (*s
+
+stdout))
+
+perror(s);
+
+}
+This example is quite difficult to handle with tools such as
+or awk, where the
+number of output files is severely limited. Since lex can pick the file name from within
+a complex context, this solution is significantly easier to modify than a hand-written C
+program.
+sed
+
+2.6 Testing a lexical analyzer
+
+ylex()
+
+For use as a lexical analyzer in a compiler, ylex()
+should be designed as a function returning an int value. Upon each call, the next terminal symbol should be collected from the input, encoded, and returned as the function value. Each pattern now
+is designed to recognize one or more terminal symbols, and the associated action will
+contain a return statement to produce the function value. We must make provisions
+so that all input characters are recognized, even if they neither belong to terminal
+symbols, nor are to be ignored silently, since
+is supposed to let all input
+
+WORD RECOGNITION 31
+disappear in this case.
+Testing such a. function can be messy — the function values are numbers and as
+such usually not terribly mnemonic. We found a C programming trick quite
+program to have the following principal
+P urposes we arrange for the
+For
+g
+helpfu.
+
+debug
+
+ing
+
+lex
+
+3
+
+g
+
+sample
+
+example will show, it is possible to build a lexical analyzer in such a
+As the
+way that it can always be conditionally compiled for testing purposes in this fashion.
+The caller of yylex() receives the value MNEMONIC in printable form as a result
+The simple main() routine will then display the input text yytext
+value of ylex().
+and a decoded representation of the returned value together for debugging purposes.
+By convention,
+is expected to return zero(!) as an end of file indication.
+generates the function ylex()
+so that this happens internally; main() is coded to
+terminate once ylex()
+returns zero.
+One last advice: the reserved words of a programming language are particularly
+easy to write down as patterns. Unfortunately, a. long list of such self-representing
+patterns dramatically increases the size of the program generated by lex. It is much
+more efficient to collect reserved words and identifiers with the same, single pattern
+and to screen the results with a small C function. A standard approach to this probkm is shown in the next section.
+ylex()
+
+0
+
+lex
+
+2.7 Example
+yac
+
+From the
+we know which terminal symbols must be
+specification of sampleC
+found by the lexical analysis routine for this compiler: yylex() needs to find all symbols mentioned in %token statements and all single-character terminal symbols quoted
+directly. At present, using the debugging technique introduced in the previous section,
+we do not need to worry about the exact function values which must be returned as
+of the various terminal symbols.
+encodigs
+
+6-80,
+
+where pointer values do
+Unfortunately, this trick will not work on machines such as the MC
+fit into int
+is employed to guard against this possibility; it
+variables. The library macro
+will abort the program if the given condition is not met.
+asort°
+
+not
+
+32
+
+COMPILER CONSTRUCTION
+
+CHAPTER 2
+
+#include,
+
+The patterns pose no problems, since we will eventually run the C preprocessor
+prior to our own compiler. The C preprocessor will remove comments(!), and it makes
+the usual #define,
+and conditional compilation facilities available for o ur
+sample C implementation.
+The complete, final lexical analyzer is shown below. DEBUG must be defined when
+we compile the lexical analyzer for testing purposes. A few lines in the following file
+should therefore be ignored at present; they will be explained in chapter 3 where we
+integrate our language recognition program.
+
+re turn tok n (GE) ;
+
+,t1
+
+A
+
+P TER 2
+
+WORD RECOGNITION 33
+
+token(Idifr);
+
+return
+}
+
+the lexical analyzer is compiled for
+
+samplec.1
+
+lex
+cc -DDEBUG
+
+sample.1,
+
+Assuming that this text is in the file
+testing purposes as follows:
+lexi
+
+lex.yc
+
+-11 -o
+
+We can run some tests through this lexical analyzer to check if the proper terminal symbols are recognized. The simplest, complete program is as follows:
+main ()
+
+For this program the lexical analyzer will return the following:
+Identifier is "main'
+is
+[0] is
+ytex[0]
+is
+yytext
+is
+'(
+
+ytex[0]
+
+•
+
+ytex
+
+')
+
+"{'
+
+"}
+
+[o]
+
+We took a very simple approach to recognizing single character operators and at
+the same time finding and signaling all illegal input characters: if no other pattern
+catches a character, it is returned itself as value of ylexO.
+In this fashion we obtain
+a compact lexical analyzer, and we will later deal with all input errors in a systematic
+way.
+A few other features of the lexical analyzer are perhaps worth mentioning. lex
+has a rudimentary text replacement facility within the patterns. A line of the form
+name
+
+replacement
+
+in the first part of the lex
+specification defines a replacement text for a name. The
+name can then be specified as
+{name}
+
+within a pattern, and the replacement will be substituted. We use this facility often,
+usually to make the patterns more transparent and mnemonic.
+The first pattern deals with lines of the form
+lineumbr
+
+#
+
+filename
+
+Such lines are produced by the C preprocessor as position stamps during file inclusion
+and selection for conditional compilation. As will be explained in chapter 3,
+is a function which we designed to record the relevant information for our own error
+messages.
+ymark()
+
+As promised, we use a simple binary lookup function screen() to recognize
+reserved words as special cases of those terminal symbols recognized by the identifier
+pattern. screen() is really intended as a. blueprint solution for such a screening problem. Notice how the token technique is even used in the reserved word table!
+s
+is a handle for symbol table management which we will use and
+beginning in chapter 5.
+up()
+
+lok
+
+-
+
+explain
+
+2.8 Problems
+
+1. Write a lex program which will read a Pascal program and print out only (* *)
+mments, eliminating everything else. Hint: what modifications are needed to the lex
+co
+pattern for C comments given in section 2.3?
+2. Write a lex pattern which will recognize a Fortran REAL constant, defined as a
+string of digits having either a decimal point or an E-type exponent, or both. For an
+additional challenge, take into account the fact that in Fortran, white space is allowed
+anywhere outside of quote marks, even within the characters of a constant, identifier,
+or keyword.
+3. Using the pattern in problem 2, write a complete lex program which will read a
+Fortran program and convert all REAL constants to DOUBLE PRECISION. The program
+should also change all REAL variable declarations to DOUBLE PRECISION. (It is convenient that the word REAL occurs in Fortran only as a variable declaration statement,
+assuming that it is not foolishly used as a variable name.)
+4. Write a complete lex program which will read a program written in your favorite
+programming language, recognize all of the keywords in that program, and print them
+in upper case letters. All other upper case letters should be converted to lower case.
+Hint: use a function like screen() (see section 2.7) to recognize the keywords.
+5. Write a complete lex program which will read a program written in your favorite
+programming language and produce a cross-reference table of all identifiers in the program. Hint: once your lex program recognizes an identifier, it should use suitable C
+functions to compare it to a. table of language keywords, which can be ignored, and to
+the list of other previously recognized identifiers. New identifiers should be added to
+the latter list. Each list entry should be the head of a chain of cross-reference eleterminates, the
+ments which record values obtained from yylineno. After
+cross-reference table can be printed.
+ylex()
+
+38
+
+CHAPTER 3
+
+COMPILER CONSTRUCTION
+
+Current state, on top of the stack, and next terminal symbol, produced as needed by a
+select an operation from the transition matrix. The file _;.output
+call to ylex(),
+shows the contents of the transition matrix for each acceptable next terminal symbol
+and each state. Five types of operations will be found in the transition matrix:
+accept
+ylex(),
+
+This operation .happens only once, namely when we have send as next terminal symbol, represented as a non-positive value of
+and are getting ready
+to successfully complete recognition.
+error
+This operation is found as element of the transition matrix for all those next
+terminal symbols which must not be seen in a particular current state.
+shif t new state
+. indicates that the next terminal symbol is acceptable in the
+This
+current state. The new state is pushed onto the stack and becomes the current
+state. We have, in fact, moved on in some configuration.
+,
+
+operati
+
+nu?loer
+
+reduce formulation
+
+formzilatn
+
+This operation is present in the transition matrix for all those states which
+number indicates the complete
+contain a complete configuration. The
+configuration; it appears following the configuration in the file
+At this
+has symbols.
+point, we will pop as many states off the stack as the
+The uncovered state on top of the stack is the new current state. The nonterminal whose formulation was just completed is used prior to the next terminal
+be processed following the nonsymbol. The actual next terminal symbol
+terminal symbol just explained.
+wil
+
+formulatin
+
+y.outp
+
+goto new state
+
+sr,ift
+
+saw,
+
+a reduce operation implicitly generates a non-terminal symAs we just
+bol to he used prior to the next terminal symbol. goto is the shift operation for
+this non-terminal symbol. A. shift operation always uses and discards the next
+terminal symbol; a goto operation uses a non-terminal symbol and leaves the next
+terminal symbol for a subsequent shift operation. Otherwise, goto and
+
+3
+
+CHAPTER LANGUAGE RECOGNITION 39
+
+operate in the same fashion: the new state is pushed onto the stack and becomes
+the current state.
+To illustrate the operations in context, let us look again at the simple grammar
+introduced in chapter 1:
+'-
+
+:
+
+expression
+expression
+I IDENTIFIER
+
+IDENTIFIER
+
+In chapter 1 we introduced a file y. outp
+which yacc can produce from this
+grammar. We will now once again look at this file to demonstrate that it in fact fully
+documents the parser. The parser starts out with state 0 as current state on the
+stack:
+state 0
+$accept _expression Send
+:
+
+IDENTIFIER shift
+error
+
+2
+
+expression goto 1
+
+If the next terminal symbol is an IDENTIFIER, we will perform a shift operation,
+i.e., we will accept the
+and push the new current state 2 onto the stack. Any
+other input symbol would be considered in error.
+syinbol
+
+state 2
+
+expression
+
+:
+
+IDENTIFIER
+
+(2)
+
+reduce 2
+
+Without regard to the new next terminal symbol, we will use formulation 2 for a
+reduce operation, i.e., since formulation 2 consists of one symbol (IDENTIFIER), we will
+pop one state of the stack. Having come this far we uncover state 0.
+
+:
+
+The reduce operation has just generated expression as a non-terminal symbol,
+and the instructions for state C prescribe that we goto state 1 in this situation.
+Notice that the next terminal symbol, if any, has thus far not been considered.
+state
+$accept
+Send
+expression expression- IDENTIFIER
+exprsion_
+
+:
+
+.
+
+$end accept
+- shift 3
+error
+
+ylex()
+
+In state 1 we consider the symbol following the first IDENTIFIER in the input.
+$end, the end of input, or a – operator are anticipated at this point. $end leads to an
+accept operation — our parser has recognized IDENTIFIER as a sentence! It would be
+instructive for the reader to follow the parser actions in y.ouput for a longer sentence.
+One problem remains: how does
+know what values yyparse() expects as
+representations of the next terminal symbol? A natural convention is to represent single characters as terminal symbols by their value in the character set, i.e., the C
+
+lez,
+
+in this chapter, we will be putting things t
+a lexical analyzer specification presented to
+table facility, make up a language recognizer. A
+can be used for such things as pretty-print
+To start, we need to understand the workin
+a
+f rom a grammar, deposits in the file
+this background in place, we show in section 3.2
+ally put together.
+It turns out that we must supply a main()
+which will be called from
+procedure
+the input. In section 3.3 we take time out to pr
+which allows us to optionally invoke the C prep
+also construct a general yyerror() function whi
+tion of an error in the input to the parser.
+Unfortunately, grammars do not always im
+the language designer. In section 3.4 we therefo
+It turns out that the file
+bugs in the
+can
+be
+combined
+into a useful str
+vided by yac
+the grammar.
+We will conclude the chapter with a forma
+ally implement such a program, we must still so
+about terminal symbols from the lexical analy
+specifications,
+actions enter the picture in
+constructing a simple desk calculator.
+nizer
+
+y.tabc,
+
+yero()
+
+recogniz.
+
+yac
+
+3.1 Parser generation
+
+We explained in section 1.4 how yacc
+
+yac,
+
+amounted to traversing all rules in a highly par
+terminal symbol acceptance. If we can someh
+things must actually get simpler: rather than fol
+lel, yacc can then move through only those s
+The result must be a device for language recogn
+in fact, builds a parser while analyzi
+down automaton — a stack machine — consi
+states, a transition matrix to derive a new sta
+current state and next input symbol, a table of
+executed at certain points in the recognition, an
+mit execution. The result is packaged as a func
+on a lexical analyzer function ylex()
+to read s
+or one to indicate whether or not a sentence was
+
+Chapter 3
+Language Recognition
+
+recog-
+
+together: a grammar presented to yacc,
+combined with a rudimentary symbol
+As the example will show, such a
+ting programs.
+constructs
+ngs of the parser which
+and describes in the file y. output. With
+is actu2 bow a
+for
+yac
+
+sampleC
+
+recogniz
+
+program to drive the recognizer and a
+m the parser if an error is discovered in
+resent a comfortable version of main()
+processor prior to our own compiler. We
+ich gives a clear indication of the posi-
+
+mmediately reflect the true intentions of
+ore discuss how one goes about finding
+e y. output and a debugging option prorategy to locate "misunderstandings" in
+satnpleC.
+
+atter for
+Before we can actuolve the problem of passing information
+yzer to the parser. Thus, in section 3.5,
+, and we demonstrate their flexibility by
+
+c analyzes a grammar. The analysis
+rallel fashion while simulating arbitrary
+how feed real input to this algorithm,
+llowing numerous possibilities in paralstates which are selected by the input.
+nition, a parser or syntax analyzer.
+ing the grammar. The parser is a pushisting of a "large" stack to hold current
+ate for each possible combination of
+user-definable actions which are to be
+nd finally an interpreter to actually perction yyparse 0, which calls repeatedly
+standard input, and which returns zero
+s presented as input file.
+
+40 COMPILER CONSTRUCTION
+
+CHAPTER
+
+3
+
+yac,
+
+constant 'x' will represent the terminal symbol 'x' in the grammar presented to
+however,
+For a terminal symbol name, introduced by a %token statement in yac,
+must use the same integer value as a representation; this value
+0 and ylex()
+must be distinguishable from the representation of single characters.
+aids in defining suitable values. The command
+yac
+
+yparse
+
+yacc -d gram,y
+
+y.tabh
+
+containing one C preprocessor #define stateinstructs yacc to produce a file
+1
+ment for each name introduced as %token. The replacement text for each name is a
+unique integer constant, starting at 257.
+which is also produced
+is already present within the file
+The file
+The same terminal symbol
+by yacc, and which contains the function yparse().
+with a C preprocesy.tabh
+by
+including
+representations can thus be used for
+sor #include statement in the definition of the lexical analysis function.
+This requires, however, that names used in the grammar for terminal symbols and
+introduced through %token statements cannot be reserved words in C. The lexical
+can be written by hand, or it can be produced by (ex as disanalysis function ylex()
+cussed in chapter 2.
+
+y.tabc,
+
+ylex()
+
+y.tabh
+
+3.2 Example
+in a form acceptable to yacc. Assume that
+In section 1.6, we presented sampleC
+conIn
+section
+2.7, we showed the file samplec.1
+this definition is in a file sarnplec.y
+taining a lexical analyzer for the terminal symbols of sampleC. We can now put both
+functions together to obtain a parser for sample C.
+If we do not define DEBUG while compiling the lexical analyzer, the C preprocessor
+statements
+'y.tabh"
+
+#include
+#define token(x) x
+
+samplec.1
+
+will take effect. The first causes the terminal symbol representations proin
+The second statement disto be used in compiling
+in y.tabh
+yacc
+duced by
+ables our debugging technique for the lexical analyzer: for debugging, we returned the
+terminal symbol names via
+int
+
+ux°
+
+ylex().
+
+#define token(x)
+
+as printable C strings. Now we return the values for those names, as defined in
+y.tab.h.
+The very last pattern in the lexical analyzer:
+return token(yytext [OD ;
+{other}
+takes care of returning the character values for all unrecognized single character terminal symbols. This pattern is placed last so that a single letter or digit is recognized by
+I
+
+%lert,
+
+Terminal symbol names can also be introduced through a first appearance in
+%nonassoc statements. We prefer to always define terminal symbols first with %token.
+
+%right, o
+
+CHAPTER 3
+
+LANGUAGE RECOGNITION 41
+
+earlier patterns as an Identifier or a Constant.
+We produce the recognizer with the following commands:
+samplec.1
+
+lex
+
+samplec.y
+
+yac
+
+-d
+
+c
+
+ly
+
+l a pi t h 1 4 ,
+
+u
+
+eai
+
+11
+
+y, quite. If we compile in this fashion, we pick the main() routine from
+y pa
+—
+not
+r aryin
+and as we saw in chapter 2, this routine will only call ylex()
+once and
+rse not at all! We need to supply a different main() routine such as
+()
+
+t
+
+r
+
+liemb s
+
+e
+
+-
+
+y.tabc
+
+cc lex.yc
+
+{
+
+yparse();
+}
+
+One more routine must also be provided by the user of yam When the parser
+executes an error operation in the transition matrix, there is a syntax error in the
+input file. At this point, an error message should be written, and yyparse () therefore
+issues the call
+
+It is up to us to program a suitable
+etc. A trivial solution is the following:
+
+yero(s)
+
+<stdio.h>
+
+#include
+
+routine indicating the input position,
+yero0
+
+ypero(usntax
+
+errors);
+
+char * s;
+{
+
+putc('\n,
+
+stder),
+
+fputs(,
+
+stderr);
+
+()
+
+}
+
+We need not count the individual errors. This is handled automatically by yyparse
+in the int variable
+yners.
+
+If those two routines are in a file extra.c, we can complete the compilation begun
+above with the command
+lex,y.o
+
+extra.c
+
+cc
+
+y.tabo
+
+a.out
+
+The resulting recognizer in file
+
+-11
+
+can be executed as follows:
+
+a.out
+
+main () { }
+-
+
+D
+
+Nothing happens, and this is as it should be:
+main 0 {
+
+is a very small, legal sampleC
+program. Our
+will produce nothing at all if
+he
+is in fac t sentence. If it is not, we will be faced
+by a curt syntax error.
+input
+
+recogniz
+
+t
+
+42 COMPILER CONSTRUCTION
+
+CHAPTER 3
+
+3.3 Auxiliary functions
+yero()
+
+routines shown in the preceding section are of the
+The main() and
+software engineering quality of lex. User-friendly compilers should pinpoint input
+errors at least at the line number level, and the error messages should be more tha n
+just syntax error. In this section we discuss a general approach to this problem.
+We begin with the main() routine. It turns out that it is quite convenient to
+always be able to invoke the C preprocessor to obtain standard file inclusion, t ext
+replacement, and conditional compilation facilities. Also, the C preprocessor will
+remove C-style comments, unless the —C option is specified. Our standard main() routine will invoke the C preprocessor if at least one of the option arguments known t o
+the preprocessor is used; we can thus always provoke preprocessing through the
+or
+—E option:
+3
+
+1
+
+—
+
+CHAPTER 3
+
+LANGUAGE RECOGNITION 43
+
+The routine checks all arguments. Options always start with —. If there is an
+option known to the C preprocessor, the preprocessor will be invoked through our
+described below, which is given access to all the arguments. Following
+function
+t h e options, there may be one file name argument, which will be opened as the source
+file, After argument processing, main() calls yyparse() and propagates the return
+va l ue as exit() code of the process. As a test bed, this routine is quite convenient.
+Wh en a compiler nears completion, the routine is usually extended with more option
+processing and usage information output for illegal arguments.
+
+cp()
+
+which actually runs the C preprocessor, is somewhat involved.
+The routine
+elegant
+solution
+which
+avoids having temporary files hinges upon being able to conAn
+is implicitly forced to read from it. By definition,
+nect a pipeline so that
+reads
+single
+characters
+by
+calling a routine input() defined as a macro by
+y lex()
+It turns out that this routine in turn reads from the file pointer yyin which is externally accessible. This can be used in
+ylex()
+
+cpO,
+
+lex.
+
+cp():
+
+CHAPTER 3
+
+44 COMPILER CONSTRUCTION
+
+poen()
+
+cpp() first measures the string length of all options known to the C preprocessor.
+It then acquires memory for a composite string and builds a command to call the C
+from the standard library, the C
+preprocessor with those options. Using
+the
+command
+string is freed, and cpo
+,
+n
+i
+y
+preprocessor is connected as a filter to
+returns zero it all this has worked.
+Turning now to error reporting, we first present a standard header for messages
+giving a sensible amount of positioning information. We would like to include the
+name of the source file, especially when files are preprocessed by the C preprocessor.
+is maintained correctly by lex as long as no preproThe current line number
+cessing takes place. The current or next token can be found in yytext [] but this
+token may be a line feed; at the end of the source file it might even be empty. In both
+A lot of information
+cases, the actual line number of the error is less than
+can be provided in an automated fashion, but it needs to be carefully formatted:
+ylineo.
+
+ylineo
+
+4
+
+LANGUAGE RECOGNITION 45
+
+CHAPTER 3
+
+4
+We define yyerfp as a separate file pointer, which is used for all messages. The
+compiler designer can thus still choose to emit the messages as standard output (the
+default), or to write them to a separate file simply by assigning a different file pointer
+to yyerfp.
+is a routine which extracts source file and line information from the
+position stamps emitted by the C preprocessor; see section 2.7.
+If all possible parts are present, the message header produced by yywhere() would
+appear as follows:
+ymarx()
+
+sonrce.,
+
+line 10 near •badsymol:
+
+where
+
+bacleymo
+
+usually is the symbol following the error.
+We are now ready to write a standard yyerror() routine which better pinpoints
+the location of an error
+
+Yners
+
+is a counter which is maintained by
+this counter is incremented
+once after each call to yyerror() is issued. Especially in a long compilation protocol,
+yac;
+
+.1
+
+48 COMPILER CONSTRUCTION
+
+CHAPTER 3
+
+it is quite helpful if the error messages are sequentially numbered.
+
+3.4 Debugging the parser
+
+we
+
+The parser is ready for testing. Unfortunately, nothing at all will happen if
+present a correct input file to our parser for processing. If the input file is incorrect,
+we will receive one more or less useful error message. If we believe that the input fil e
+is correct, but the error message appears anyhow, things can get messy: we need to disdecided to issue a call to the error message routine.
+cover why
+The technique outlined in section 2.6 enables us to verify that the lexical analyzer
+is not at fault, i.e., that
+actually received the symbols which we assume to
+be in the input file. Once this has been verified, we can use a debugging facility proif we compile the parser y.tab.e with the symbol YDEBUG
+defined
+vided by yac:
+yparse()
+
+yparse()
+
+lem.yc
+
+y.tab.c
+
+-DYEBUG
+
+main.c
+
+yero.c
+
+cc
+
+-11
+
+the resulting yyparse () function contains a tracing option which can be enabled by
+variable yydebug to a nonzero value. yydebug is a global variable and
+setting the
+can for example be set with adb:
+int
+
+a.ont
+
+adb -w
+ydebug?w
+
+1
+
+Sq
+We illustrate the results of tracing with slightly modified versions of the simple
+expression grammar introduced in section 1.4. Here is a rudimentary lexical analyzer:
+"y.tabh°
+
+#inlude
+
+yac
+
+J us t like a lex specification, the input file for
+may also contain a third part precopied into y.tabe;
+This part
+here it contains a main() routine which
+g ifiit exists. For i
+illustration purposes, the return value of yyparse 0 is
+will esdetby
+ydebug
+
+%.
+
+shown.
+yacc will produce the following y. output file for this parser:
+
+exp.l
+
+ne
+
+statistical information has been omitted.
+Assume that the inputs to lex and
+are in the files
+struct the parser and execute it with a correct input:
+
+and exp.y. We con-
+
+yac
+
+50 COMPILER CONSTRUCTION
+
+CHAPTER 3
+
+crIkP
+
+TER 3
+
+LANGUAGE RECOGNITION 51
+
+52 COMPILER CONSTRUCTION
+
+CHAPTER 3
+
+3
+
+'TER
+
+LANGUAGE RECOGNITION 53
+
+CHAI
+
+l
+
+yac;
+
+computes the integer value of a string of digits. This
+The library function atoi0
+a
+v
+l
+y
+as
+the actual value of the Constant.
+va l ue is recorded in
+The value to be pushed during a goto operation, i.e., during acceptance of a nonterm i na l symbol produced by a reduce operation, is taken from the global variable
+it can be set from within the action executed during the
+defined by
+reduce operation.
+As the example shows, the action usually needs to access the values placed on the
+value stack during acceptance of the symbols for the formulation which is about to be
+reduced. The notation $1 within an action represents the value for the ith symbol in
+the formulation presently on the value stack; the notation $$ represents yyval, i.e., it
+represents the value which will be pushed onto the value stack during acceptance of
+symbol by the goto operation following the reduction.
+the
+The action
+
+yva
+
+no-termial
+
+= $1; }
+
+{ $
+
+is supplied by default. It states that the value stack entry of the first symbol in the
+formulation will become the value stack entry of the non-terminal symbol to which the
+formulation is reduced.
+
+Our desk calculator works as advertised. For each Constant, the lexical analyzer
+provides the actual value in ylva
+which yyparse O places on the value stack. Once
+a formulation such as
+expression : expression '-
+
+expression
+
+is reduced, the associated action
+}
+
+$$ = $1 - $3;
+
+computes the appropriate difference, which is pushed onto the value stack following
+the reduction. The printf 0 function call at the top shows the value of each expression line presented to the desk calculator.
+
+Typing the value stack
+and the value stack can be used to hold a large variety of information. By default the value stack consists of
+elements. For our desk calculator
+double elements may actually be more interesting. In a compiler, ylva
+will most
+likely hold a pointer to a symbol table entry for each "large" terminal symbol. Unfortunately, double values — and on certain machines even pointers cannot be stored
+and retrieved from
+variables.
+
+3.6
+
+ylva,
+
+yval,
+
+int
+
+int
+
+specifaton.
+
+The value stack maintained by the parser can be typed from within a yacc
+In this section we will describe a way of typing the value stack which is
+e
+ntirely transparent to yacc itself; a more elaborate typing facility which prompts yacc
+to perform rather extensive semantic checks will be discussed in section 5.4.
+ite y if ot
+the value stack are defined in the parser to be of the type
+YSTPE
+itself is defined with the C preprocesor as int, unless an explicit
+supplied in
+ptphleiedfiras
+st
+yacc specification. Transparent to
+can
+be
+supplie
+d
+n
+
+ts
+
+lnvia.
+
+y
+
+fisnd
+
+yval,
+
+l,ycpvaibed
+
+YS-
+
+rP
+
+E.
+
+yac,
+
+definto
+
+folws:
+
+to
+
+1;
+}
+
+if_prex
+
+and it sets the
+is called during the reduction of
+In both cases,
+turns out to be an expression and
+left margin inward. In the first case, statement
+the indentation remains. In the second case, statement will be a
+will be reduced for the left brace before any other reduction takes
+and therefore
+; which notes from
+calls
+place. The action during reduction of
+(IN) : has just taken place. The left brace can therefore be exdented
+that a call
+As promised, static variables are used to pass context
+and placed underneath if.
+information between neighboring reductions. The technique has little to recommend it
+other than that it avoids a lot of devious rewriting of the grammar itself.
+shows a second method of specifying
+The formulation of
+actions:
+compund_stae
+
+cond(IN),
+
+lr
+
+condflag
+
+cond(EX)
+
+ir
+
+compund_stae
+
+cond
+
+compund_stae
+:
+
+lr
+
+1(AT),
+
+declarations
+}
+{
+statements rr
+
+nl(AT),
+
+Our formatting style requires that an empty line follow declarations. The call
+will issue the blank line. An action can be placed anywhere in a formulation;
+if it does not follow the entire formulation, yacc will generate an anonymous nonterminal symbol in place of the action and define the non-terminal symbol with a
+empty formulation followed by the action. The formulation shown above is really
+expanded as follows:
+declarations $$123 statements rr
+
+compund_stae
+lr
+
+$$123
+/*
+
+empty */
+{ n1 (AT) ; }
+
+Actions cannot be placed entirely at will in this fashion; the anonymous non-terminal
+symbols can introduce conflicts.
+
+CHAPTER 3
+
+LANGUAGE RECOGNITION 63
+
+One problem has not been discussed: this formatter only deals with a source file
+that has been preprocessed, i.e., which contains no comments! In a realistic implementation, the lexical analyzer would have to collect the comments, and pass them to the
+formatting routine, probably attached to terminal symbols. This involves a significant
+amount of bookkeeping, and the problem of formatting comments is nontrivial.
+
+3.8 Problems
+1. Extend the desk calculator example so that it uses variables. A very simple extension is to predefine twenty-six variables, a through z, and the storage in
+which to save
+their values. A more interesting problem is to allow arbitrary variable names; in this
+case, storage both for the strings that name the variables and for their values should
+be acquired dynamically.
+
+tha
+
+2. The formatting style used in section 3.7 may not be your favorite format. Modify
+the formatting program given in that section so
+it conforms to your preferred
+standards.
+3. Write a formatting program for a subset of Pascal, perhaps the one used for problem 1 of section 1.8.
+4. The formatter given in section 3.7 produces a
+blank line following each function.
+This means that if the last definition in a file is a function_ definition,
+there will
+be a useless blank line as the last line of the output. Change the program to suppress
+this extra blank line. Hint: it may be easier to control the blank line if you emit it
+before each function, rather than after.
+5. Write a formatting program for EBNF. It should display an EBNF grammar in a
+
+BNF.
+
+standard format, such as the one suggested in section 1.7. It is convenient to start
+with the solution to problem 3 of section 1.8.
+6. Write a program which will convert a grammar written in EBNF to
+Hint:
+for reasons of efficiency internal to yacc, use left-recursion for iterations. See the discussion of the treatment of its stack by yac
+in the left- and right-recursive definitions
+of
+expression : expression '-' expression
+
+in section 3.4.
+7. Modify the standard
+
+/usrlibyacp
+
+to produce the trace format shown in this
+chapter. For some important hints, see section A.8 in the appendix.
+8. In the last paragraph of the previous section, it was mentioned that inclusion of
+
+user-tabl
+
+comments in the formatted output is somewhat difficult. An approach to the solution
+of this problem was also suggested. Modify the example from that section, or the program from question 2, 3, or 4 above, to display comments. Suggestion: if a comment
+is the first "thing" on a line, display it at the beginning of the line (perhaps at the
+current indenting level). If the comment follows something else on the same line,
+display it at a
+or predetermined "tab" position.
+9.
+
+Using techniques similar to those used in solving the previous problem, write a program which will display preprocessor lines (lines with # in column 1) as part of a program.
+
+Real compilers deal mostly with incorrec
+we can make our parser robust against input
+happens inside the parser when an input err
+far the parser would "fall off the stack" du
+provides a special error terminal symbol to in
+4.2 we demonstrate what happens if a pars
+error.
+The problem in general is to build robus
+mulations added to some rules. Fortunately w
+a number of constructs frequently found in pr
+they cope with any error. Our technique is pr
+we show how a robust recognizes for sampleC
+strate its behavior in case of erroneous inputs.
+
+4.1 The problem
+Thus far, our parser can recognize and
+correct input file. One of the examples in s
+present the incorrect input
+
+a-to a parser based on the rule
+:
+
+'-
+
+expression
+expression
+I IDENTIFIER
+
+expression
+
+with — defined to be left-associative. yyparse
+
+The second — in state 3 leads to an error oper
+state 3
+
+expression : expression -_
+IDENTIFIER shift 2
+
+Chapter 4
+Error Recovery
+
+ct input files. This chapter discusses bow
+errors. We first use tracing to show what
+ror is encountered. It turns out that thus
+uring an error operation. However, yac
+nfluence the parsing algorithm. In section
+ser is properly prepared to cope with an
+
+st grammars using error symbols in forwe found a straightforward way to extend
+rogramming languages in such a way that
+resented in section 4.3, and in section 4.5
+is defined, and how we can fully demon.
+
+d perhaps manipulate a sentence, i.e., a
+section 3.4 showed what happens if we
+
+n
+
+falls off the stack:
+
+ration in the transition matrix:
+
+_expression
+
+CHAPTER 4
+
+66 COMPILER CONSTRUCTION
+error
+expression goto 4
+
+Once the error message has been issued, yyparse() seems to remove all states from the
+stack — obviously looking for something. Since the stack is cleared in the process,
+returns with a function value of one, and the recognition procedure is
+aborted on encountering the first error in the input!
+yparse0
+
+4.2 Basic techniques
+Our lexical analyzers usually have the following entry at the end of the pattern
+table:
+ytexf0];
+
+return
+
+The pattern is intended to pick up all single character operators. However, this entry
+i.e.,
+will return the integer value of any single character as function value of
+as a terminal symbol, as long as the character has not been recognized by an earlier
+pattern.
+Unexpected input characters are thus passed from the lexical analyzer to the
+represented by single characters.
+parser as if they were legitimate terminal symboL,
+This results in a uniform treatment of all input errors. An alternative approach at
+this level would be to have the lexical analyzer report its own problems, and then to
+ignore illegal characters; however, in this case it is hard to avoid cascades of messages.
+At the symbol level, we can add formulations to the grammar that are probable
+although illegal. This technique makes our recognizer more tolerant than the language
+designer intended it to be. While we can forgive the most frequent user errors in this
+fashion, the technique does not have a high probability of complete success — it is
+nearly impossible to exactly predict an incorrect input sequence.
+A better approach is to treat an input error as a special case of a terminal symbol:
+error is a predefined terminal symbol for yacc. error can be used in formulations
+just like a terminal symbol; however, error is (normally) not produced by a call to the
+lexical analyzer. Instead, the parser believes error to be the next terminal symbol if
+the actual next terminal symbol leads to an error operation in the transition matrix
+for the current state. Once the error symbol has been internally generated in this
+will set out to accept
+fashion, and the obligatory error message issued, y
+error almost like any other symbol.
+Consider the following modification to the rule above:
+ylex(),
+
+parse0
+
+-
+
+'-
+
+expression
+: expression
+I IDENTIFIER
+
+expression
+
+I error
+A parser based on this grammar will silently accept erroneous input. To understand why this is the case, we need to once again follow the traces of a few examples.
+will produce the following y.output file:
+$accept
+:
+
+state 0
+
+_expression $end
+
+yac
+
+CHAPTER 4
+
+ERROR RECOVERY 67
+
+.
+
+error shift 3
+IDENTIFIER shift 2
+error
+
+expression goto 1
+state 1
+:
+
+$accept : expression Send
+expression
+exprsion_expression
+
+-
+
+Send accept
+shift 4
+
+accepting $error
+•recovery discards
+
+[ydebug]
+
+•
+
+.
+
+.
+
+'+
+
+[ydebug]
+
+yyparse 0 = 0
+
+In order to avoid a cascade of error messages, the parser must
+
+shift three terminal
+
+yerok,
+
+symbols beyond the point of error, before another error results in an error message.
+This way a cluster of errors may result in only a single error message. In this example,
+this explains the absence of the second error message.
+action, the parser can be persuaded to feel that it has accepted
+With the
+enough terminal symbols, and thus to report errors in close proximity to one another.
+is attached as an action to a formulaThere is a drawback, though: if
+immediately believes that enough terminal
+tion consisting only of error,
+symbols have been shifted, and thus can never discard an erroneous input symbol!
+action is the following extension to our
+A more sensible example for the
+
+yparse0
+
+yerok:
+
+yerok,
+
+grammar:
+expression
+expression
+IDENTIFIER
+
+'-
+
+expression
+
+:
+
+I error
+
+)'
+
+yerok;
+
+Once we have seen an IDENTIFIER following an error, it is reasonable to assume we are
+back on the right track, and thus to request to be informed of subsequent errors. This
+extension will produce two error messages for our example:
+expecting: IDENTIFIER
+[error 1] line 1 near
+expecting:
+[error 2] line 1 near
+yyparse = 0
+:
+
+1
+
+•-
+
+'-
+
+action are the yacc features to use in making
+The error symbol and the
+a parser robust. The tricky problem is to employ these basic tools judiciously.
+
+yerok.
+
+4.3 Adding the "error" symbols
+The placement of error symbols is guided by the following, conflicting goals:
+• as close as possible to the start symbol of the grammar.
+This way there is always a point to recover from, since there should always be
+state
+very low on the stack in which error can be accepted. The parser then is
+a
+never able to clear its stack early, i.e., to not complete by recognizing the end of
+file from the lexical analyzer.
+• as close as possible to each terminal symbol.
+This way only a small amount of input would be skipped on each error. This
+actions.
+can be improved using
+• without introducing conflicts.
+conflicts is reasonThis may be quite difficult. In fact, accepting
+able as long as they serve to lengthen strings. E.g., one can continue parsing an
+expression past an error, rather then accepting the same error at the statement
+
+I
+
+CHAPTER 4
+
+70 COMPILER CONSTRUCTION
+
+shift/reduc
+
+yerok;
+
+CHAPTER 4
+
+ERROR RECOVERY 71
+
+level, thus trashing the rest of the expression.
+Following these goals, we recommend the following typical positions for error
+symbols:
+• into each recursive construct, i.e., into each repetition.
+• preferably not at the end of a formulation.
+This should result in a robust recovery, i.e., in a recovery from which the continuation is meaningful. Adding a trailing error and
+action may lead to
+cascading error messages, or even to loops if the parser cannot discard input.
+• non-empty lists require two error variants, one for a problem at the beginning
+of the list, and one for a problem at the current end of the list.
+• possibly empty lists require an error symbol in the empty branch.
+yerok;
+
+If this proves impossible, add the symbol to the places where the possibly
+empty list is being used.
+The following table is our recommendation for the placement of error symbols in
+the most frequent repetitive constructs':
+
+construct
+optional sequence
+
+EBNF
+x: y
+
+yacc input
+x: /* null */
+
+x: y{ y }
+
+x
+}
+I x error
+x:
+I x y { yyerrok }
+yerok;
+
+}
+}
+
+list
+
+I error
+X e rror
+x:y
+I x T y { yyerrok;
+I error
+I x error
+x error y { nreok;
+x T error
+y{T}
+
+sequence
+
+x.
+
+We will demonstrate the three cases in turn. In each case, we use the lexical
+analyzer constructed for the desk calculator in section 3.5. Error recovery for the
+optional sequence can be studied using the following input for
+
+yac:
+
+1
+
+This way of extending repetitive constructs has a drawback due to a bug in
+(as distributed
+with Bell version 7, Berkeley
+and various derivatives): if in a state the default action is to reduce,
+and if the next terminal symbol cannot be shifted but error could be (e.g,
+on a trailing error in a rule),
+tables dictate that the reduction take place, even if the next terminal symbol cannot be shifted
+subsequently. In this case error recovery takes place "too late", and the parser can, in fact, go into a
+loop, mistakenly reduce rules several times, etc. The
+distribution actually contains a correction
+for this bug, based on
+Essentially, in these cases all possible inputs must be enumerated, so
+that the error can be detected; this results in slightly larger parser tables. The correction in
+contains a typographical error, however. A definite correction is available from the authors (S. Johnson,
+
+yac's
+
+4,2bsd
+
+yac
+
+4.1bsd
+
+4.1bsd
+
+[Gra791.
+
+personal communication, 1982).
+
+74 COMPILER CONSTRUCTION
+
+CHAPTER 4
+
+to
+
+demonstrate that we are able to recover in all cases. Unfortunately, the case
++ 20
+is recovered through the rule
+list error
+
+:
+
+list
+
+and the second element of the list is discarded! If we eliminate this formulation, however, recognition does not terminate properly in the case of a trailing error.
+Our recommendations for the placement of error symbols do not guarantee that
+a useful input symbol is not ignored in some error situations. Actual use, however, has
+convinced us that these recommendations lead to very robust parsers for common
+language constructs in a systematic fashion.
+4.4 Adding the "yyerrok" actions
+yerok,
+
+should be placed following terminal symbols at all points at which a formulation can end in error and is then followed by a reasonably significant terminal
+symbol. The repetitive constructs described above have already included the relevant
+actions.
+This way, once the terminal symbol is reduced, any subsequent error would again
+be reported — the three-symbol-rule notwithstanding.
+
+}
+
+sc
+rr
+
+•
+
+rP
+
+sampleC
+
+In effect, some symbols become rather important, in
+
+for example
+
+CHAPTER
+
+4
+
+ERROR RECOVERY 75
+
+78
+
+COMPILER CONSTRUCTION
+
+CHAPTER 4
+
+CHAPTER 4
+
+ERROR RECOVERY 79
+
+CHAPTER 4
+80 COMPILER CONSTRUCTION
+
+CHAPTER 4
+
+ERROR RECOVERY 81
+
+82 COMPILER CONSTRUCTION
+
+CHAPTER 4
+
+4. Integrate the techniques used for expression in problem 3 into the error recovery
+for sample C.
+5. Change the desk calculator of problem 3 so that after any error, it will prompt the
+user for a corrected input line. Hint: special care must be taken in the placement of
+statements, since it would clearly be unacceptable for the parser to discard
+tokens from the re-entered line as part of its response to errors in the original line.
+8. Add error recovery features to the grammar produced for a Pascal subset in problem 1 of section 1.8. Test your grammar with an input file containing a suitable selection of erroneous Pascal code.
+
+yerok:
+
+Chapter 5
+Semantic Restrictions
+We now turn from the general problem of robust language recognition to the more
+s pecific problem of analyzing a program text in order to produce a translated, executable version of it. The word program will therefore be used in place of sentence, i.e.,
+it is defined as a sequence of terminal symbols, for which a unique parse tree with
+respect to a grammar can be built. This chapter discusses how we impose additional
+restrictions on a program, thus completing the analysis part of a compiler; the following chapters describe the synthesis of an executable version of the algorithm described
+by a program.
+5.1 The problem
+A program can be syntactically correct and still contain semantic errors. Some
+typical examples are the following:
+In Pascal, labels are digit strings which must be declared in a label declaration before they can be used. While the lexical analyzer might return such a digit
+string as IntegerConstant, if it is used in a goto statement, a compiler has to
+verify that it is a declared label.
+In Pascal, labels must be declared before they are used. In C a label is an
+Identifier; if it is newly introduced following
+it is implicitly declared to be
+a label. In almost all languages, labels can be defined after they have been used.
+For all labels, the compiler must verify that they have, in fact, been defined.
+Labels are just one — sticky — example of scope problems: a user-defined object
+is only known within a particular area of the program text, known as the scope of a
+name. In Basic, the scope of a variable name is the entire
+text (with the
+exception of user-defined function parameter names). In Fortran, variable names are
+known only within a program unit, i.e., a function or subroutine; program unit
+names and common area names are known throughout all modules which are bound into
+an image, a file which may be executed. In Pascal and other Algol-like languages,
+user-defined names are known within a block, Le., a syntactically delimited area of the
+program text which contains the definition for the name; blocks can be nested, and the
+definition of a name in an outer block can be hidden for the extent of an interior block
+by a new definition for the name in the interior block. C combines Algol block structure and the module concept of Fortran: compound statements are blocks which can
+be nested, can contain declarations, and limit their scope; function names are known
+globally and need not necessarily be declared before use. It is the compiler's responsibility to monitor the correct use of user-defined names within their respective scopes,
+as well as to generate code providing appropriate access to the various objects.
+Names cannot in general be declared twice in the same context, e.g., two parameters may not have the same name, two local variables in the same block must use
+different names, two components of the same struct, union, or record construct must
+differ. While C permits struct and other names to be identical, some versions of C
+require component names to be distinct even for different structures.
+got,
+
+progam
+
+84
+
+CHAPTER 5
+
+COMPILER CONSTRUCTION
+
+PL/I,
+
+Declarations in a program convey the intended use of a name to the compiler.
+Once the use has been agreed upon, abuse must be prevented. Consider:
+or deliberately
+with the notable exception of
+In most languages
+strings and numerical values cannot be combined, e.g.,
+lenient tools like awk
+for addition. In Pascal, mixed mode expressions, i.e., combinations of real and
+integer values, are permitted for most operators, but certain restrictions apply:
+expresses integer division only, / delivers a real result even for two integer
+operands, permits assignment from integer to real but not conversely, etc.
+—
+
+—
+
+.=
+
+div
+
+Operators change their precise meaning based on the types of their operands.
+In some dialects of Basic, + denotes addition for numerical values and concatenation for strings. In Pascal, + denotes addition for numerical values and union for
+set values — at least in common representations of the language. In C, + can
+describe involved address manipulations if it combines a pointer and an integer
+value. Numerically, and as a machine instruction, + is quite a different operation
+between integer or between floating point values: the result of the integer operation is independent of the order of its operands and of implicitly placed
+parentheses, whereas the floating point result can critically depend on it.
+Component selection in struct, union, or record constructs requires in general that the selector name belong to the structure of the variable from which the
+selection is to be made, i.e., operators like -, and -> have rather strict requirements for the types of their operands. C is — intentionally — rather permissive
+,
+
+in this respect.
+Enumerating a fixed, maximum number of identical phrases is a cumbersome
+technique in BNF. It also cannot handle some features usually found in programming
+
+PL/I
+
+languages. Consider:
+Basic arrays normally may have one or two dimensions. Some versions of
+Fortran limit arrays to seven dimensions. A compiler must limit the number of
+indexing expressions in general, and it must verify for each specific array reference
+that the correct, individual number of indices is used. In Pascal or C, arbitrarily
+many dimensions can be defined; however, the number of indices used determines
+the data type of the reference.
+A similar problem arises with function parameters. Number and types of the
+arguments are predefined for built-in functions, and follow from the definition for
+user-defined functions. A Pascal compiler must at least verify that argument
+values and parameters fit together; C is quite permissive in this respect. A
+compiler is even responsible for argument conversion.
+Parameter passing poses another problem: if, as in Pascal, a subprogram may
+indicate a desire to modify some of its arguments, care must be taken to insure
+that only suitable arguments are handed down. In Fortran, all parameters can be
+in the sense of C) will be changed
+modified, but only certain arguments
+as a consequence — this is a code generation problem.
+constants, types,
+Most semantic restrictions deal with user-defined objects,
+variables, subprograms and labels. We will need a symbol table, into which all information from declarations and definitions is entered, and which is consulted whenever a
+user-defined name is referenced.
+
+(I-values
+
+i.e,
+
+CHAPTER 5
+
+SEMANTIC RESTRICTIONS 85
+
+Some semantic restrictions, however, deal with problems which defy a simple syntactic resolution. Consider:
+In Pascal or C, all constants in the context of case must be distinct. In C,
+case and default labels must be positioned within a statement dependent on a
+
+switch clause; interestingly enough, this dependent statement need not even be a
+compound statement!
+
+Similarly, the break and continue statements of C must be placed in a context from which the desired escape makes sense.
+Restrictions like these require a certain amount of local testing associated with
+particular constructs. Our implementation of sampleC
+will demonstrate how one can
+check break and continue by means of a separate stack; in general a certain amount
+of ingenuity is required, since these problems do not fit a uniform framework.
+5.2 Symbol table principles
+A symbol table is the central place in which the compiler keeps all information
+associated with user-defined names and constants. While the design of a symbol table
+entry depends on the information required by the compiler and obtainable from the
+declarations in a program, the organization of the entries for searching reflects the
+scope rules of the language:
+Basic, for example, can be handled with a table to which each new name is
+simply added. All names are globally known; thus the table never needs to be
+pruned unless the entire information about a program is erased. Parameters for
+user-defined functions are only known within the function; they can be entered
+into a second table, which is erased as soon as work on the function has been completed.
+Fortran essentially requires two tables: one table contains information about
+all identifiers introduced within a subprogram, while a second table might be used
+to store subprogram names. The first table would be erased after compilation of
+each subprogram unit. The second table is not really required if subprograms are
+combined with a linker; in this case the subprogram names would be reported to
+the linker.
+Pascal has a strict declare before use rule and nested scopes. The nested
+scopes are reflected by using a stack as a symbol table: new names are pushed on
+top of the stack, and the stack is appropriately popped once the end of a scope,
+i.e., the end of a function or procedure definition, is reached. Whenever a name
+is referenced, we can search the stack top-down and thus locate the innermost
+definition for the name.
+Other members of the Algol family do not necessarily require that names be
+declared before use, as long as a declaration is present within the scope of the
+name. This situation is somewhat involved: we need two passes over a program,
+the first one to collect all declarations and to essentially propagate them to the
+beginning of their scope, and the second one to then deal with references based on
+the information collected in the first pass.
+
+int
+
+C permits nested scopes for variables, but functions cannot be nested. There
+is a declare before use rule, except that functions with
+result need not be
+
+CHAPTER 5
+
+86 COMPILER CONSTRUCTION
+
+[Bau76].
+
+McKeman
+
+declared. In general, a stack of names will do, as long as we keep functions in a
+global table, even if references to them are discovered locally.
+What information is stored in a symbol table entry? For searching purposes, the
+entry must have access to the user-defined name; for usage verification we must
+represent the type of the object; and during code generation we will need to store
+information about the representation of the object — location on a stack, offset or
+absolute address, length, etc. If the symbol table is organized as a stack, the entries
+will be linked; if the stack is popped, we need to remember at which scope nesting level
+the entry was defined.
+Representing the type of an object might be difficult. In Fortran there is only a
+small number of types, and additionally the object can be dimensioned as an array;
+this can be represented with a few integer values in the symbol table. In languages
+such as Pascal or C, with a rich set of data type constructors, a recursive description
+will have to be built, which will usually involve pointers to further symbol table
+entries.
+Name searching is another area where a number of different techniques are available. In general, when the lexical analysis function has assembled a user-defined name
+or literal constant, it will immediately locate it in the symbol table, or enter it there if
+it is as yet unknown. From then on, a pointer to the symbol table entry is passed
+along providing access to information about the symbol, and eliminating the need to
+search the symbol table more then once. The initial search is thus performed by a
+routine which is called only from the lexical analyzer; in order to speed up this search,
+data structures such as hash tables might be used in addition to the symbol table
+itself. Since a lexical analyzer spends a significant amount of processing time on the
+name search, a lot of literature is available on the subject of table searching; for starin
+ters consult, e.g., chapter 3.D. by W.
+5.3 Example
+
+re0
+
+ef
+
+For sampleC we stick with a symbol table stack, represented as a linear list of
+entries. In order to keep things as simple as possible, we will not use additional data
+structures to speed up searching — this is left as an exercise. We manage the entries
+library routines.
+and
+dynamically using the canoe()
+We will search the symbol table stack backwards from newest to oldest symbol.
+In this fashion, the innermost declaration of a name will be found first, provided that
+we pop local entries off the stack once we leave a compound statement.
+We therefore need to know where the local declarations of each open block begin.
+This could be done by a stack of open block descriptors, from which a linked list connects the relevant symbol table entries. To simplify, at the expense of some processing
+time during block closure, we maintain a global counter of nesting depth of compound
+statements, and copy the current value of this counter into each symbol table entry
+when a declaration for the symbol is performed. Local entries on the symbol table
+stack then are precisely those which were marked with the current nesting depth.
+Defective programs may result in some symbols never being declared; they are marked
+with an initialization value for the depth field and are also removed at block closure.
+
+CHAPTER 5
+
+SEMANTIC RESTRICTIONS 87
+
+One complication arises from the fact that functions need not be defined before
+they are used. However, functions may not be nested, so this problem can be solved
+by moving function descriptors in the symbol table to the outermost block. In our
+dynamically linked scheme, this is quite easy to accomplish: we simply relink a function
+descriptor at the bottom of the symbol table stack. We do need to save function
+descriptors, since we are building a one pass, load-and-go compiler, which does not
+employ a linker for image assembly, and which therefore must itself check that all
+referenced functions have actually been defined.
+Another, smaller complication is the fact that in C parameters need not be explicitly declared: once their names have been mentioned in a parameter list, they become
+int variables by default. This can be handled by chaining the parameters in the symbol table, when they are initially found in the parameter list. Once the
+parmet_dclions
+have been reduced, we can follow the chain and default all
+remaining, undeclared parameters.
+While it is not required, we will check consistent use of functions, i.e., we will at
+least count that they are always called with the same number of arguments.
+There is one massive simplification in
+since the language only supports
+an int data type, we need not worry about type incompatibilities. In general, semantic restrictions need to be enforced in this context; this is best done by computing
+result types as the various operations are recognized by the parser, and by passing the
+result types along on the yacc stack. The resulting analysis is bulky enough so that we
+decided to omit it here by not supporting additional data types.
+
+sampleC:
+
+First we design a symbol table entry and define possible values for certain fields.
+This information is placed into symtab.
+h:
+
+88
+
+COMPILER CONSTRUCTION
+
+currently,
+
+CHAPTER 5
+
+CHAPTER 5
+
+SEMANTIC RESTRICTIONS 89
+
+CHAPTER 5
+
+I
+
+CHAPTER 5
+
+SEMANTIC RESTRICTIONS 91
+(struc
+
+0;
+
+*)
+
+symtab
+
+=
+
+>s_next
+
+s_gb1
+-
+
+}
+
+Note that the entry is only linked into a different position on the symbol table stack;
+the entry itself is not moved in memory, so the pointer value referencing the element
+and passed as an argument does not change.
+
+s
+
+We placed a blind element on top of the symbol table stack, so that we do not
+need to check if we are moving the current top of the stack, i.e., so that we do not
+need to adjust ic
+as a special case.
+Initially, however,
+may not point at the blind element — if it did, we would
+add the first (global) definition following s_gbl,
+local definitions might get positioned
+between
+and this global definition, eventually one of them might be moved to
+become global.. and general mayhem would result!
+must be initialized to point
+to a global entry — a blind element there would split the symbol
+table into two halves
+and would thus create another special case. Fortunately, there is a useful global entry:
+every
+program must contain a main() function initially, we therefore open
+the outermost block, and initialize
+to point to an entry for main as an undefined
+sgbl
+
+s_gbi
+
+sampieC
+
+s_gbi
+
+s_gbl
+
+function:
+
+blk_pus();
+
+= s
+
+s_gb1
+
+main°);
+UFUNC;
+I
+
+creat(
+
+s_gbl
+
+-
+
+>slype
+
+}
+
+int()
+
+must be called before the symbol table can be accessed. A call to
+int()
+
+int
+
+yparse().
+
+therefore can be placed into the main() function of our compiler, prior to the call to
+Another, more visible solution is to call
+0 very early from the parser
+itself. This is the first action added to the parser:
+{
+
+•
+
+int();
+definitions
+
+}
+
+program
+
+bik_po();
+
+}
+
+{
+In this fashion,
+
+snit()
+
+will be called before any calls to the lexical analyzer.
+0 pushes the block stack:
+
+int
+
+blknum;
+
+bik_push()
+
++
+}
+
+blk_po()
+
+blk_po()
+
+Every call to blk_push()
+must be balanced by a call to
+to pop henceforth inaccessible symbols from the symbol table stack, to discover undefined functions, etc. We will defer a discussion of
+until we have seen how symbols are
+actually entered into the symbol table.
+Every user-defined name is first seen by the lexical analyzer. ylex()
+
+must enter
+
+every symbol into the symbol table, as long as it is not already there. We have already
+
+placed calls to a function s lookup() into the lexical analyzer for this purpose;
+s_lokup()
+is called with the terminal symbol representation in yytext E and with
+
+r
+
+vi
+
+CHAPTER 5
+
+CHAPTER 5
+
+SEMANTIC RESTRICTIONS 99
+
+100 COMPILER CONSTRUCTION
+
+CHAP TER 5
+
+CHAPTER 5
+
+SEMANTIC RESTRICTIONS 101
+
+SEMANTIC
+
+CHAPTER 5
+
+RESTRICTIONS
+
+103
+
+5.4
+
+Typing the value stack
+
+$i
+
+While implementing the symbol table facilities and semantic checks, we have made
+heavy use of the value stack: for Identifier terminal symbols, we passed symbol table
+pointers from the lexical analyzer to the parser; for constant terminal symbols, we
+passed pointers to dynamically acquired string storage; we chained the
+parameter list using symbol table pointers; and we counted up the number of
+expressions in the argument_list on the value stack as well. This last use of stack elements unfortunately necessitates a union of types for the value stack. We count using
+an int variable, but we point to the symbol table using a pointer data type. While
+pointers in C can be cast as pointers to any data type, it is still a good idea to employ
+different data type specifications when pointing to strings and to symbol table elements.
+Even as a union, the value stack could still be typed as described in section 3.6.
+However, once we refer to stack elements using the
+syntax within actions, we need
+to inform yacc just what component of the union should be referenced in each case.
+To put it differently, we must associate a data type syntactically represented as a
+union component with all those symbols presented to yacc which we reference through
+This of course requires certain extensions of the yacc specification syntax
+Si or
+described up to now.
+
+$.
+
+$S
+
+We prefer to "type" our grammar in a separate editing pass following construction
+of all the actions. During this pass we need to note all terminal and non-terminal symbols which are referenced on the value stack and decide on a data type for the
+corresponding value stack element. If we rely on the default action
+= $1;
+
+to actually pass a value, we need to consider the associated symbols even if the default
+action is not explicitly specified. (This is one reason why we usually comment those
+points in a yacc specification in which we rely on the default action.)
+Once all the necessary data types are known together with those symbols which
+need to be typed, we can proceed to modify the yacc specification. We will describe
+the modification using the sampleC specification as a concrete example.
+First we must define the data type of value stack elements. This is done in the
+first part of the
+specification using a union declaration in the style of C, prefixed
+by a %
+In our case, value stack elements can be pointers to the symbol
+table, pointers to character strings, and integer values for counting. We define:
+
+yac
+
+chartes.
+
+Identifier */
+/* Constant */
+/* count */
+
+/*
+
+symtab
+
+y_num;
+
+int
+1
+
+y_sm;
+
+%union {
+*
+struct
+char * y_str;
+
+ylvsi
+
+There are other methods to define the data type, but we believe this technique to be both visible in
+the yacc specification, and convenient, since the resulting union declaration as well as an extern declaration for
+are automatically placed into the file y.tabh
+
+104
+
+CHAPTER 5
+
+COMPILER CONSTRUCTION
+
+ylva.
+
+Next we type those terminal symbols for which during lexical analysis a value is
+Syntactically, this is achieved by placing the name of a union
+assigned to
+component, enclosed in angle brackets, between %token and the list of terminal names
+to be so typed. In our case, Identifier and Constant have corresponding values on
+the stack:
+<y_sm>
+<y_str>
+
+%token
+%token
+
+Identifier
+Constant
+
+These assignments
+by the routine
+The values are assigned to
+must, of course, also use union components — this has already been tacitly done
+correctly in section 5.3.
+Finally we must type all those non-terminal symbols for which $1 or $$ are referenced. This is accomplished by making a %type definition in a manner very similar to
+and
+a %token definition for terminal symbols. We must type
+for counting purposes, and
+and
+optinal_rgumes
+to pass the parameter chain header:
+slokup0.
+
+ylva
+
+argument_lis
+
+parmet_lis
+
+optinal_rmes
+
+<y_sro>
+
+<y_num>
+
+parameter list
+
+argument_list
+optinal_rgumes,
+
+%type
+
+optinal_rmes,
+
+%type
+
+It should be noted that as soon as %union, %type, or the < > syntax is used,
+very strictly checks that all references to the value stack are typed appropriately. Any
+to terminate with a fatal error indicating the
+omission immediately causes
+offending line in the specification.
+One subtle typing facility, required especially for anonymous non-terminal symbols (see section 3.7), has not yet been discussed. It will be shown when it is required
+in section 6.2.
+
+yace
+
+yace
+
+5.5 Problems
+test program containing deliberate errors to provoke all semantic
+1. Write a
+error messages in the compiler.
+to use a hash scheme, to speed
+2. Change the method of storing symbols for
+up the search for names. Demonstrate, e.g., using the C profiling option, that there is
+a gain in efficiency.
+a block descriptor stack, which can essentially be maintained as
+3. Add to
+value stack. What changes will this require in typing of the value
+part of the
+stack? Again, try to measure the gain in efficiency.
+
+sampleC
+
+sampleC
+
+sampleC
+
+yace
+
+4. Remove those parts of symbol table management which will be unnecessary if a
+linking loader is used. Decide how (and when) to pass information to the linker.
+5. Extend the desk calculator with simple string operations. Use the operator + to
+denote both addition and string concatenation. Should the resulting problem be handled in the grammar, or by separate semantic routines? I.e., should the grammar
+know Constant, or rather Number and String?
+
+Chapter
+Memory Allocation
+We are now ready to define an implementation of the
+language for a particular machine. We must develop policies for memory allocation and code generation.
+
+sampleC
+
+It is interesting to note that the entire problem of language recognition could be
+solved without any knowledge of the target machine. This serves to emphasize that a
+significant amount of the code of a compiler can be completely target- and hostmachine independent.
+In this and the following chapters, we will emphasize the principles rather than
+attempt to cope with the peculiarities of a particular machine. We will therefore
+describe the implementation for a fictitious machine which is adapted to the requiresource language.
+ments of the
+
+sampleC
+
+6.1 Principles
+The memory allocation policy defines the representation of variables, i.e., the
+implementation of declarations. We must decide how much memory to allocate to an
+object of each data type, and how to address the object, i.e., where to place it during
+program execution, to support particular life expectancies.
+Run time memory assignment tends to mirror symbol table organization to some
+extent. Consider:
+In Basic, there are only global variables, kept in a global symbol table, which
+for an interpreter might as well also hold the values of the variables during execution. The parameters of user-defined functions can be handled with the same
+stack which is normally used for expression evaluation.
+In Fortran, subprograms cannot be called recursively. Since the values of
+local variables must be preserved between successive calls to the same function, we
+must assign a unique memory cell for each variable in each subprogram.
+In C, Pascal, and other Algol-like languages, subprograms can be called recursively; hence, we must dynamically allocate space for the local variables of a subprogram as it is called. Since local variables normally cease to exist once a subprogram terminates, we can free and reuse their space. Function invocation is a
+stack discipline, and this discipline must be employed for managing the local variables as well.
+The nesting of scopes in Algol-like languages poses an additional problem. If functions may be nested during definition, they have access by name only to a selective
+subset of the local variables of the currently activated functions.
+The nesting of compound statements, with the associated rules for the life expectancy of variables declared within a compound statement, leads to a reuse of memory
+which can be managed at compile time. Compound statements can be viewed as
+anonymous subprograms which can only he entered sequentially, i.e., in the same order
+as the compiler sees them. Since compound statements are anonymous, they can
+themselves not be called recursively; thus, the compiler has full information about the
+behavior of the life expectancy of local variables defined in a compound statement.
+
+110 COMPILER CONSTRUCTION
+
+CHAPTER 6
+
+CHAPTER MEMORY ALLOCATION
+6
+
+1
+
+114
+
+COMPILER CONSTRUCTION
+
+CHAPTER 6
+
+CHAP TER 6
+
+MEMORY ALLOCATION 115
+
+6.3 Problems
+1. Suppose that the output from our compiler is to be processed by an assembler, i.e.,
+the compiler will emit assembler code rather than machine code. What would be
+needed to allocate global variables by name? How would this simplify the compilation?
+2. Suppose that sampleC is to be implemented on a machine in which one word occupies more than one addressable memory location (e.g., one word is made up of two
+separately-addressable bytes). What changes must be made to the memory allocation
+routines?
+3. Many languages allow nesting of function definitions. What part of the allocation
+algorithm for sampleC would have to be changed so that function definitions could be
+nested? Keep in mind that a variable in an outer nesting block may be accessed as a
+global variable by an internally nested function (as long as there is no conflicting
+definition of its name in the internal function). How can the internal function reference such variables?
+4. Using right recursion, it was simple to reverse the order of acceptance of the names
+in a parameter_ list. What happens if we write an
+in a right recursive fashion? Since right recursion is not acceptable in this case, what other technique
+could be used to arrange for the arguments to a function call to be pushed onto the
+stack in reverse order?
+argument_lis
+
+Now that we are able to allocate memory
+to produce a compiler that will generate code
+showing how to generate code for a stack mac
+operations available on our machine, proceeds
+tion of expression values and for assignment s
+lems of generating code to implement if a
+attempt is made to optimize the generated co
+the chapter suggest how some additional efficie
+
+7.1 Principles
+
+The code generation policy determines w
+each action that can be expressed in the pro
+approach, given a stack machine, is to arran
+postfix notation. Making local and global vari
+depending on the addressing structure of the t
+
+The only difficult aspect, which for an act
+the design of the calling sequence for functio
+"suitable" instructions; managing the activat
+require that appropriate subprograms be desi
+gram. Such subprograms are a natural place
+of the compiled code.
+
+The implementation of iteration and d
+number of forward branches, e.g., around t
+tunately, these forward branch instructions
+with an unknown target address, so that sp
+later with the corrected address. If we actua
+need to fix the relevant memory locations.
+
+If we decide to emit assembler text, we c
+direct the assembler later to the proper prog
+jump instruction once we know its actual tar
+this case, however, is to simply generate a sy
+with the forward branch.
+The break and continue statements of
+relevant label information is pushed when a w
+a switch statement is included in the languag
+information for continue can significantly diff
+stacks aLso serve to determine the legality of
+test which we had deliberately postponed in ch
+
+Chapter 7
+Code Generation
+
+y in our fictitious machine, we are ready
+e for it. Most of this chapter is devoted to
+chine. Section 7.2 begins by defining the
+s to the generation of code for the calculastatements, and then considers the proband while control structures. Very little
+ode; however, the problems at the end of
+ency could be achieved.
+
+what instructions need to be issued for
+ogramming language. A straightforward
+nge for the expressions to be converted to
+iables addressable might pose a problem,
+target machine.
+
+tual implementation is quite important, is
+on calls. For our example we will assume
+tion record stack on a real machine may
+igned and linked with each compiled proto insert traces for debugging or profiling
+
+decision statements usually requires a
+the else part of an if statement. Unfors usually have to be emitted twice: once
+pace for the instruction is reserved, and
+ally construct a program in memory, we
+pseudo-intrc
+
+could use an origin
+to
+gram address so that we may reissue the
+rget address. A much better technique in
+ymbolic label, and let the assembler deal
+sample('
+
+require stacks onto which the
+f
+while or similar statement is processed. If
+ge, two stacks are required, since then the
+fer from the information for
+The
+f the use of these statements, a semantic
+hapter 5.
+break,
+
+118 COMPILER CONSTRUCTION
+
+7.2 Example
+
+CHAPTER 7
+
+We will demonstrate how to generate assembler code for our fictitious machine.
+The assembler source format is similar to that of many existing assemblers: one
+instruction per line; an optional label field starts in column one; the second, mandatory
+field contains a mnemonic operation code; a third field might contain an operation
+modifier or other information; fields are separated by white space; and a comment may
+follow at the end of the line. The details of the format are not really important at this
+point, since they are easily changed in the code generation routines.
+As a quick overview of the available instructions, consider their definition in the
+
+gen.h:
+
+following header file
+
+CHAPTER 7
+
+/*
+
+*/
+char * gen_mod();
+
+CODE GENERATION 119
+
+typed functions, code generator
+/* region modifier */
+
+The precise definition of each instruction is implied by the simulator presented in
+chapter 8. For the purposes of code generation, the following remarks should suffice to
+characterize the effect of each instruction:
+
+alu
+
+Our fictitious machine is a stack machine. Code generation for expressions is
+therefore quite simple: the values of variables and constants must be pushed onto the
+stack, using load instructions provided for this purpose, and for operators an alu
+instruction must be issued_ The
+instruction has a modifier which indicates what
+arithmetic or logic operation is to be performed on the two elements on top of the
+stack. The result of the operation then replaces the two elements on the stack.
+Modifiers happen to exist corresponding to each operator in sampleC.
+Assignments, of course, correspond to store instructions. In sarnpleC, however,
+assignment can be an embedded operation. The store instruction therefore will not
+remove a value from the stack. This is instead accomplished by an explicit pop
+instruction, which must be coded whenever an expression value is to be discarded.
+Code generation for if and while statements involves the construction of
+appropriate branching instructions. There are some forward references, e.g., to the
+else part of an if statement; these are handled by generating unique labels based on a
+counter, passing them on the semantic stack in yacc actions, and letting the assembler
+resolve the definitions.
+break and continue pose a more subtle problem: in sampleC they are allowed
+only inside a while loop. This is best monitored by separate stacks, on which each
+while statement is expected to deposit appropriate labels, which are removed at the
+
+end of the dependent statement.
+
+Function calls are handled by a call instruction, which expects the function arguments to be on the stack. This instruction contains the number of actual arguments,
+so that the parameter segment can be set up properly.
+At the beginning of a function we need to code an entry instruction specifying the
+amount of space to reserve on the stack for local variables. The combination of call
+and entry instructions is assumed to handle all problems associated with parameter
+passing and dynamic allocation of local variables.
+The return instruction will remove the local activation record from the stack, and
+restore all relevant hardware registers. If the return instruction is preceded by the
+evaluation of an expression, the value must be saved prior to return, since code following call must be generated to remove all arguments from the stack. This code is also
+expected to push any result value of a function back onto the stack.
+We will again show additions to the grammar next to the new code generation
+functions called by these actions. A complete listing is in section 6 in the appendix.
+Let us start by considering code generation for arithmetic expressions:
+
+124
+
+COMPILER CONSTRUCTION
+
+CHAPTER 7
+
+0
+
+1
+
+1-
+
+sampleC
+
+Code for the dependent statement can then be generated. An unconditional branch to
+the continuation point follows, and then the label must be defined to which we branch
+when we want to leave the while construct.
+The resulting code is not optimally efficient: if we moved the code for the condition to follow the dependent statement, we could use the conditional branch to iterate
+the loop and thus save one branch per iteration. This, however, would require that we
+save the code for an expression somewhere.
+has break and continue statements, which within a while construct
+transfer control to the termination or iteration points. The statements must be implemented as unconditional jumps, and we must supply appropriate labels. Since while
+statements can be nested, the labels must be stacked; since in C a switch establishes a
+new nesting level for break but not for continue, we chose to implement two stacks,
+although sampleC
+could be implemented with one.
+We have already pushed the stacks in the lop_refix
+and in the while statement expansion; following the while construct, we have popped the labels. Assuming
+the existence of push() and pop() stack management functions, the routines can be
+
+CHAPTER 7
+
+CODE GENERATION 125
+
+125
+
+COMPILER CONSTRUCTION
+
+CHAPTER 7
+
+CHAPTER 7
+
+CODE GENERATION 127
+
+CODE GENERATION 129
+
+130
+
+COMPILER CONSTRUCTION
+
+CHAPTER 7
+
+Chapter 8
+A Load-and-Go System
+
+pieC.
+
+sequnc
+
+The preceding chapter demonstrated that it is relatively simple to construct a
+d
+ro e generator if the target machine architecture is close enough to the source
+languag e. Once the implementation, Le., a memory allocation policy and code
+for the various actions in the source language, has been defined, we can turn
+lo s imulation of a suitable machine architecture as one means of completing the programm ing system- This chapter will show the construction of a simulator for the
+mac hin e assumed in the previous two chapters, and it will show how a load-and-go syst em is developed using such a simulator. The discussion is necessarily quite specific to
+However, several languages have been implemented in a similar fashion, e.g.,
+marn
+and
+Mod u la-2.
+Pascl
+8.1 A machine simulator
+
+A simulator for our fictitious machine is actually quite simple to construct. First
+nreviousI
+
+defined in
+
+gen.h:
+
+names
+
+we need to define numerical codes for the individual instructions and instruction
+modifiers. The resulting header file sim.h provides a different representation for all
+
+134
+COMPILER
+
+CONSTRUCTION
+
+CHAPTER 8
+
+A
+LOAD-NG
+
+CHAPTER 8
+
+SYSTEM 135
+
+138 COMPILER CONSTRUCTION
+
+CHAPTER 8
+
+CHAPTER 8
+
+A LOAD-AND-GO SYSTEM 139
+
+140
+
+COMPILER CONSTRUCTION
+
+A LOAD-AND-GO SYSTEM 141
+
+A LOAD-AND-GO SYSTEM 147
+
+CHAPTER 8
+
+The example shows nicely that the code could be shortened by postprocessing,
+s i n ce, e.g., of a series of return instructions only the first can actually be reached.
+g,4 Problems
+
+gen_cal
+
+1. I mprove the simulator by having return pass result values on the stack, and by
+the pop and load instructions following call. (See sece li minating from
+1
+tion 8. .)
+2. As was mentioned, the call, return, and entry instructions for our fictitious
+machine are not very realistic. On real machines, these instructions tend to be much
+s impler. Design more "realistic" instructions, and change the code generator and the
+simulator to use them. Hint: you will probably need some register manipulation
+instructions.
+3. Add run-time options to the simulator, either through compiler options or by special comments which generate appropriate pseudo-instructions. Possible options
+include: printing or suppressing a listing of the compiled code before execution begins;
+an option of whether to execute the program, based on the presence or absence of compilation errors, or on the number or type of errors (ordinary errors, or warnings); a
+li mit on the number of instructions to be simulated; a more extensive trace option,
+perhaps with a limit to the number or type of instructions to be traced.
+4. Modify the simulator to handle arithmetic exceptions, such as division by zero.
+5. Modify the simulator to use dynamically managed memory, rather than the fixedsize arrays of "tunable size" defined near the beginning of this chapter.
+8. The program segment structure, defined near the beginning of this chapter to simplify decoding, is neither realistic of ordinary machine architecture, nor particularly
+compact. Modify this feature of the simulator to make it more efficient and more realistic.
+8.5 Projects
+1. Reorganize the compiler so that it consists of several separate programs: (1) the
+compiler of chapter 7, which generates assembler code; (2) a simple assembler (the
+and (3) the simulator.
+assembler can, of course, be written using yacc and
+
+lex!);
+
+2. Using the three programs of the previous project, rearrange the compiler so that
+functions can be compiled separately, and the results combined either by the assembler
+or by a separate linking loader. Note that global variables might be included in any
+function compilation, and all must appear in the final executed program.
+3. A large number of language extensions is conceivable: char or other integer-type
+variables, floating point variables, vectors with or without pointers, structures; other
+control features, such as switch, for, do while.
+4. More interesting language extensions result from introducing parallelism, e.g., by
+introducing standard procedures (i.e., simulator instructions) for coroutine jumps in
+the style of
+or by adding a parallel control structure. Vectors should be
+a
+dded also to make this project more realistic.
+Modula-2,
+
+150
+
+COMPILER CONSTRUCTION
+
+APENDIX
+
+A
+
+'samplen
+
+ApENDIX
+
+A
+
+COMPILER LISTING
+
+151
+
+APENDIX
+
+152 COMPILER CONSTRUCTION
+
+A
+
+"sampleC'
+
+APPENDIX A
+
+COMPILER LISTING 153
+
+APENDIX
+
+154 COMPILER CONSTRUCTION
+
+A
+
+"sampleC
+
+APPENDIX A
+
+COMPILER
+
+LISTING 155
+
+156 COMPILER CONSTRUCTION
+APENDIX
+
+A
+
+A parser is then prepared with the following command:
+pace -d sample.y
+The —d option instructs yacc to produce both the parser y.tabc
+definition file y.tab.h.
+
+and the token
+
+A.2 Lexical analysis
+
+The lexical analyzer function in file samplec.1
+was shown in section 2.7. From this
+file, the lexical analyzer is prepared with the following command:
+samplec.1
+
+lex
+
+A.3 Messages
+
+File message.c contains the C functions introduced in chapter 5 to issue error
+messages. (The comments /*VARARGS1*/ prevent lint from complaining about the
+varying number of arguments with which these functions are called.)
+
+"sampleC
+
+APPENDIX A
+
+COMPILER LISTING
+
+157
+
+CONSTfir2
+,
+
+Ar
+17:'
+IT
+
+15S
+
+COMP13.EF?
+
+M
+
+A
+
+M-TENDLX
+
+A
+
+'ti.anple"
+
+COMPILER LISTING
+
+159
+
+160
+
+COMPILER CONSTRUCTION
+
+APPENDIX A
+
+"sampleC
+
+APPENDIX A
+
+COMPILER LISTING
+
+161
+
+162 COMPILER CONSTRUCTION
+
+APPENDIX A
+
+APPENDIX A
+'sampleC"
+
+I
+
+COMPILER LISTING
+
+163
+
+164 COMPILER CONSTRUCTION
+
+APPENDIX A
+
+"sampleC
+
+APPENDIX A
+
+COMPILER LISTING 165
+
+166 COMPILER CONSTRUCTION
+
+APPENDIX A
+
+A
+"sampleC
+
+APENDIX
+
+COMPILER LISTING 167
+
+168
+
+COMPILER CONSTRUCTION
+
+ampleC
+
+gen.c
+
+gen.c
+
+File
+tious
+
+APPENDIX A
+
+includes the C functions which generate assembler code for our fictimachine. These routines were introduced in chapter 7.
+
+"sarnpleC
+
+APPENDIX A
+
+COMPILER LISTING
+
+169
+
+170
+
+COMPILER CONSTRUCTION
+
+APPENDIX A
+
+APPENDIX A
+"sampleC
+
+COMPILER LISTING
+
+171
+
+172
+
+COMPILER CONSTRUCTION
+
+APPENDIX A
+
+"sampleC
+
+APPENDIX A
+
+COMPILER LISTING
+
+173
+
+APENDIX
+
+174 COMPILER CONSTRUCTION
+
+A
+
+I
+
+"sampleC
+
+APPENDIX A
+
+COMPILER LISTING
+
+175
+
+176 COMPILER CONSTRUCTION
+
+APPENDIX A
+
+APPENDIX A
+
+"sampleC
+
+COMPILER LISTING 177
+
+178
+
+COMPILER CONSTRUCTION
+
+APPENDIX A
+
+APPENDIX A
+
+"sampleC
+
+COMPILER LISTING
+
+179
+
+180
+
+COMPILER CONSTRUCTION
+
+APPENDIX A
+
+"sampleC
+
+APPENDIX A
+
+COMPILER LISTING 181
+
+182 COMP ILER CONSTRUCTION
+
+APPENDIX A
+
+APPENDIX A
+
+"sampleC" COMPILER LISTING
+
+183
+
+184 COMPILER CONSTRUCTION
+
+APPENDIX A
+
+APPENDIX A
+
+"sampleC" COMPILER LISTING
+
+185
+
+186 COMPILER CONSTRUCTION
+
+APPENDIX A
+
+A
+"sampleC
+
+APENDIX
+
+COMPILER LISTING 187
+
+References
+[Aho74]
+
+A. V. Aho and S. C. Johnson, "LR Parsing," Comp. Surveys, vol. 6, no. 2,
+pp. 99-124, June 1974.
+
+Aho7]
+
+A. V. Aho and J. D. Ullman, Principles of Compiler Design, AddisonWesley, Reading, Mass., 1977.
+
+[Bau76]
+
+F. L. Bauer and J. Eickel (ed.), Compiler Construction: An Advanced
+Course, Springer, Berlin, 1974, 1976.
+
+[Gra79]
+
+[
+
+S. L. Graham, C. B. Haley, and W. N. Joy, "Practical LR error
+recovery,"
+Notices, Aug 1979.
+
+SIGPLAN
+
+[Ker78b1
+
+B. W. Kernighan and D. M. Ritchie, The C Programming Language,
+Prentice-Hall, Englewood Cliffs, New Jersey, 1978.
+
+[Les78a]
+
+UNIX Programmer's Manual, Bell
+
+M. E. Lesk, "Typing Documents on the UNIX System: Using the -ms
+Macros with Trod and Nroff," in
+M. E. Lesk and E. Schmidt, "Lex: A Lexical Analyzer Generator," in
+
+[Ker78a].
+
+[Ker78a]
+
+B. W. Kernighan and M. D. McIlroy,
+Laboratories, 1978. Seventh Edition.
+
+fLes78b1
+
+[Ker78a].
+
+Compiler-,"
+
+[Joh78]
+
+"Yac:
+
+[Gri71]
+Pen751
+
+D. Cries, Compiler Construction for Digital Computers, Wiley, New York,
+1971.
+K. Jensen and N Wirth, Pascal: User Manual and Report, Springer, Berlin, 1975.
+Yet Another
+S. C. Johnson,
+in
+
+CAM,
+
+[Nau63]
+
+[Ker78a].
+
+P. Naur (ed.), "Revised Report on the Algorithmic Language Algol 60,"
+pp. 1-17, Jan. 1963.
+B. A. Wichman, "The Definition of Comments in Programming
+National Physics Laboratory, Division
+Languages," NPL Report NAC-34,
+of Numerical Analysis and Computing, Teddington, England, May 1973.
+
+Wic73] [
+[
+
+Wij75]
+
+Sintzof,
+
+A. van Wijngaarden, B. J. Mailloux, J. E. L. Peck, C. H. A. Koster, M.
+C. H. Lindsey, L. G. L. T. Meertens, and R. G. Fisker, "Revised
+Report on the Algorithmic Language Algol 68," Acta Informatica, pp. 1236, 1, 1975.
+N. Wirth, Compilerbau, B. G. Teubner, Stuttgart, 1977.
+
+Wir71 [
+
+[
+
+Wir821
+
+N. Wirth, Programming in Modula-2,
+
+Springer, Berlin, 1982.
+
+192
+
+COMPILER CONSTRUCTION
+
+INDEX
+
+error
+operation (in yacc) ...................................................................................................
+terminal symbol (in yacc) .......................................................................................
+placement of ...............................................................................................
+
+38, 67
+66, 67
+70, 71
+error() .................................................................................................................................. 101, 156
+
+Extended Backus
+form, See
+fatal() .............................................................................................................. 101, 156
+finite state automata .................................................................................................. 21
+formulation ............................................................................................................................... x, 3, 8
+forward branch ................................................................... 117, 119, 122, 138, 140, 143
+function
+call ................................................................................. 117, 119, 125, 136, 137, 143
+El3NF
+
+Naur
+
+declaration ................................................................................................................................. 87
+return ..................................................................................................................... 119, 126, 137
+goto operation (in yacc) .............................................................................................. 38, 52
+grammar .................................................................................................................................... 4, 6, 9
+ambiguity ..................................................................................................................................... 7
+deterministic ................................................................................................................................ 7
+LL(1) ............................................................................................................................................... 8
+LR(1) ............................................................................................................................................. 8
+recursion ....................................................................................................................................... 4
+recursion, See recursion
+lex ............................................................................
+22
+input syntax .........................................................
+library .....................................................................
+replacement text ..........................................
+
+with
+......................................................
+lexical analysis ...................................................
+library ................................................................
+load-and-go, See simulation
+look-ahead ..........................................................
+yac
+
+(
+
+main ) ...........................................................................
+memory allocation .....................................................
+message C) ....................................................................
+operator .........................................................................
+parameter
+allocation ................................................................
+declaration .............................................................
+parse tree ......................................................................
+
+parser .................................................................
+pattern ...............................................................
+ambiguous ....................................................
+floating point constant ................................
+
+27
+
+30, 32, 34
+27
+28
+
+34
+30, 37,
+21, 86, 91
+28, 185
+38
+
+comments .....................................................
+debugging .....................................................
+
+8
+
+28, 29, 31, 41, 42, 91
+105, 165
+101, 156
+21
+
+112
+87
+4, 6, 7
+
+37
+23
+26
+54
+
+193
+
+INDEX
+
+pattern, continued
+for
+
+comment ........................................................................................................................ 24, 25
+constant ...................................................................................................... 24, 25
+identifier ............................................................................................................................... 24
+position stamp .................................................................................................................... 32
+
+reserved words ................................................................................................. 31
+string ................................................................................................................ 25
+white space ....................................................................................................... 24
+iteration .................................................................................................................. 25
+right context .......................................................................................................... 26
+pointer
+allocation ............................................................................................................... 106
+precedence ............................................................................................................................. 7, 14, 16
+
+push-down automaton ................................................................................................ 37
+recursion ..................................................................................................................... 105
+left ................................................................................................................. 5, 7, 112
+
+right ...................................................................................................................................... 7, 113
+reduce operation ..................................................................................................................... 11, 38
+reserved word .............................................................................................................. 21
+rule ............................................................................................................................................... x, 3, 8
+See also disambiguating rule
+scope (of a. name) ................................................................................................ 83, 105
+semantic error ................................................................................................................................. 83
+semantics ............................................................................................................................................ 1
+sentence ............................................................................................................................................... 1
+shif t operation ......................................................................................................... 11, 12, 38, 52
+simulation .............................................................................................................................. 131, 172
+
+stack
+activation record ..................................................................................................
+
+106
+break ..................................................................................................... 117, 119, 124, 142, 143
+continue ............................................................................................. 117, 119, 124, 142, 143
+execution ........................................................ 105, 106, 126, 133, 135, 136, 137, 138
+See also yacc, state stack and value stack
+
+statement
+compound .............................................................................................
+
+105, 110, 121
+strsave 0 ......................................................................................................................... 58, 88, 157
+symbol table ................................................................................................ 85, 105, 120, 144, 158
+blind element ............................................................................................................................ 90
+search .................................................................................................................................... 86, 92
+symbol
+non-terminal ...................................................................................................................... 3, 6, 8
+4
+start
+3,
+6,
+8,
+21,
+51
+terminal .................................................................................................................
+representation .................................................................................................................... 39
+syntax analysis ................................................................................................................................ 37
+syntax error ............................................................................................................................. 41, 182
+
+194
+
+COMPILER CONSTRUCTION
+
+syntax graph ....................................................
+syntax .........
+testing, See debugging
+tracing, See debugging
+transfer vector ................................................
+transition diagram ...........................................
+transition matrix ..............................................
+type (of a name) ...............................................
+typographical conventions
+
+INDEX
+
+22
+1
+144
+21
+38
+86
+
+19
+101,
+156
+warning() ........................................................
+9, 37
+........................................................................
+52
+action ..........................................................
+62
+within a formulation ............................
+46, 185
+debugging ...................................................
+14
+input syntax ..............................................
+185
+library .......................................................
+37
+state stack .................................................
+19
+typographical conventions .........................
+140,
+142,
+144
+122,
+126,
+52,
+111,
+120,
+93,
+value stack .................................................
+53, 103, 111
+typing ....................................................
+54
+as a pointer type .............................
+37, 39
+with lex .....................................................
+182,
+185
+yaccpar modification .......................................
+70, 74
+action ..............................................
+37,
+45,
+183
+........................................................
+
+yac
+
+yacc ..................................................................
+
+yerok;
+
+yero()
+
+0 ....................................................................
+
+ymark
+
+See also C preprocessor, position stamps
+yywhere() .......................................................
+
+45
+
+44
+
+TOMPILER
+
+INTRODUCTION
+
+-•
+
+Axel T.
+
+SchreintTH.
+
+"e Friedman
+
+The authors designed this practical book as a case study of two powerful,
+yet easy-to-use tools in the UNIX system. They show you how to create a
+(LALR(1) parser generator) and lex
+compiler using generators such as
+(regular expression-based lexical analyzer generator).
+yac
+
+a simple subset of C, is defined and used as an example of
+compiler development. The implementation is intended to produce less
+than optimal object code, and suggestions for improvements to the code
+and extensions to the language provide problems in several chapters.
+SampleC,
+
+This tutorial shows how to get a si mple, easily modifiable implementation
+quickly and reliably. It also helps the reader to learn practical details of the
+components of a compiler and the interfaces between them. The book is a
+short exposition preceding detailed algorithm studies in compiler
+construction and offers a description of how to employ productively the
+generators described.
+
+PRENTICE-HALL, INC., Englewood Cliffs, N.J. 07632
+
+0-1B4796
+
+-
+
+ISBN
+
+2
+
+
